@@ -17,6 +17,7 @@ https://feelxiaozhu.github.io/hd-freight-audit-demo/
 - Mobile warehouse-entry form shown to warehouse employees after login
 - Package / pallet configuration
 - Pallet quantity, total height and weight entry
+- Mixed box-size entry in one shipment with automatic total box count
 - Automatic cargo-height calculation from EPAL total height
 - Dynamic carrier management
 - New carriers automatically become available in mobile warehouse entry, Tariffario upload and PDF invoice upload
@@ -178,3 +179,13 @@ Demo data is primarily stored in browser localStorage.
 - Monthly reconciliation selects the Tariffario whose validity range covers the selected month.
 - Added anomaly workflow statuses: **Da verificare / 待确认**, **Corretto / 正确**, **Errore corriere / 快递收费错误**, **Corriere contattato / 已联系快递**, and **Nota di credito / 已退款**.
 - The demo deliberately leaves theoretical freight, invoiced total, difference, and matched-shipment counts blank until real shipment-level invoice parsing exists; it does not invent reconciliation amounts.
+
+
+## 2026-10-04 · Mixed box sizes
+
+- Employee shipment entry now supports multiple box-size groups in the same shipment.
+- Example: **5 × large 80×60×60 + 3 × small 40×30×30** in one shipment.
+- Total box count is calculated automatically from all groups.
+- Added **custom dimensions** for non-standard boxes.
+- Shipment records store the structured box-group breakdown in addition to the total box count.
+- The admin record detail can therefore show mixed packaging instead of assuming one size for the whole shipment.
