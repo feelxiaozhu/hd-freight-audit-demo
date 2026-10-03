@@ -120,8 +120,9 @@ Demo data is primarily stored in browser localStorage.
 - Carrier activation / deactivation
 - More reliable server-side Tariffario parsing
 - Review / confirmation workflow for detected surcharge values
-- Full PDF invoice extraction
+- Full PDF invoice extraction with shipment-level rows and invoice totals
 - Automatic freight reconciliation and dispute reporting
+- Monthly close report with theoretical total, invoiced total, difference, match rate and recovered credits
 
 ## Changelog
 
@@ -166,3 +167,14 @@ Demo data is primarily stored in browser localStorage.
 - Recognition results are always editable before saving.
 - Shipment records now store the customer address, and the admin record list can display and edit it.
 - The GitHub-only version performs OCR in the browser; no Vercel backend is used.
+
+
+## 2026-10-04 · Monthly reconciliation workflow
+
+- Added a dedicated **monthly reconciliation** page organized by **month + carrier**.
+- Monthly view shows warehouse records, uploaded invoice batches, the Tariffario valid for that month, and open anomaly count.
+- Added monthly invoice batching: each uploaded carrier invoice is saved with a reconciliation month.
+- Added Tariffario validity ranges (**valid from / valid to**) instead of a single date only.
+- Monthly reconciliation selects the Tariffario whose validity range covers the selected month.
+- Added anomaly workflow statuses: **Da verificare / 待确认**, **Corretto / 正确**, **Errore corriere / 快递收费错误**, **Corriere contattato / 已联系快递**, and **Nota di credito / 已退款**.
+- The demo deliberately leaves theoretical freight, invoiced total, difference, and matched-shipment counts blank until real shipment-level invoice parsing exists; it does not invent reconciliation amounts.
