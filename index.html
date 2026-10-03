@@ -19,18 +19,31 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 .pallets{margin-top:12px}.pallet{padding:12px;border:1px solid var(--line);border-radius:10px;margin-top:8px;background:#fafbfc}.switches{display:flex;gap:12px;align-items:center}.switches label{font-size:14px;margin:0}.switches input{width:auto}
 .notice{padding:12px;border-radius:10px;background:#eef4ff;color:#2949a5;font-size:13px}
 .footerNote{font-size:11px;color:#8a94a6;margin-top:12px}
+.loginScreen{position:fixed;inset:0;background:#0f172a;z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}.loginCard{width:min(420px,100%);background:#fff;border-radius:18px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.loginCard h2{margin:0 0 6px}.loginCard .field{margin-top:12px}.hidden{display:none!important}.mobileOnlyShell{max-width:680px;margin:0 auto}.groupCard{border:1px solid var(--line);border-radius:12px;margin-top:12px;overflow:hidden}.groupHead{padding:12px 14px;background:#f8fafc;font-weight:700;display:flex;justify-content:space-between;gap:10px}.groupBody{padding:0 14px 12px}.smallBtn{padding:7px 10px;font-size:12px}.loginHint{margin-top:12px;padding:10px;border-radius:10px;background:#f8fafc;font-size:12px;color:#667085}
 @media(max-width:900px){.app{display:block}.side{position:static;height:auto;padding:10px}.brand{padding:4px 8px 10px}.nav{display:flex;overflow:auto;gap:6px}.nav button{white-space:nowrap;width:auto}.main{padding:14px}.grid{grid-template-columns:repeat(2,1fr)}.row,.row3{grid-template-columns:1fr}.top{align-items:flex-start}.pill{display:none}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-<div class="app">
+<div id="loginScreen" class="loginScreen">
+  <div class="loginCard">
+    <h2>HD Freight Audit</h2>
+    <div class="muted" id="loginSubtitle">Accesso dipendenti / 员工登录</div>
+    <div class="field"><label>公司代码 / Codice azienda</label><input id="loginCompany" value="HDGROUP" autocomplete="organization"></div>
+    <div class="field"><label>用户名 / Utente</label><input id="loginUser" autocomplete="username"></div>
+    <div class="field"><label>PIN / Password</label><input id="loginPass" type="password" autocomplete="current-password"></div>
+    <button class="btn primary" id="loginBtn" style="width:100%;margin-top:14px">登录 / Accedi</button>
+    <div id="loginError" class="footerNote" style="color:#d92d20"></div>
+    <div class="loginHint">Demo: Alessandro / 1234（管理员） · Mario / 1111（仅录入）</div>
+  </div>
+</div>
+<div class="app" id="appShell">
 <aside class="side">
 <div class="brand">HD Freight Audit<small>Wholesale Logistics SaaS Prototype</small></div>
 <div class="nav" id="nav">
 <button class="active" data-page="dashboard">Dashboard</button>
-<button data-page="warehouse">仓库录入</button>
+<button data-page="records">录入记录</button>
 <button data-page="packages">箱型 / 托盘</button>
 <button data-page="carriers">快递公司</button>
 <button data-page="tariffs">Tariffario</button>
@@ -41,7 +54,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </div>
 </aside>
 <main class="main">
-<div class="top"><h1 id="title">Dashboard</h1><div class="topTools"><div class="pill">Demo · 数据仅保存在当前浏览器</div><select id="languageSelect" aria-label="Language"><option value="zh">中文</option><option value="it">Italiano</option></select></div></div>
+<div class="top"><h1 id="title">Dashboard</h1><div class="topTools"><div class="pill" id="currentUserPill">—</div><button class="btn smallBtn" id="logoutBtn">退出 / Esci</button><select id="languageSelect" aria-label="Language"><option value="zh">中文</option><option value="it">Italiano</option></select></div></div>
 
 <section id="dashboard" class="section active">
 <div class="grid">
@@ -59,15 +72,27 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </div>
 </section>
 
+<section id="records" class="section">
+<div class="card">
+  <div class="actions" style="justify-content:space-between;align-items:center">
+    <div><h3 style="margin:0">仓库录入记录</h3><p class="muted" style="margin:6px 0 0">后台只查看员工提交结果，不显示手机端录入表单。</p></div>
+  </div>
+  <div style="overflow:auto;margin-top:10px">
+    <table><thead><tr><th>时间</th><th>员工</th><th>客户 / 店铺</th><th>快递</th><th>箱数</th><th>板数</th><th>尺寸 / 重量</th><th>备注</th></tr></thead><tbody id="shipmentRecordsBody"></tbody></table>
+  </div>
+</div>
+</section>
+
 <section id="warehouse" class="section">
+<div class="mobileOnlyShell">
 <div class="card">
 <h3>仓库发货登记</h3>
-<div class="row3">
-<div><label>仓库 / 员工</label><select><option>Roma Est · Mario</option><option>Roma Est · Luca</option></select></div>
-<div><label>客户编号</label><input placeholder="例如 C01238"/></div>
-<div><label>客户名称</label><input placeholder="客户名称"/></div>
-<div><label>箱数</label><input type="number" min="0" value="1"/></div>
-<div><label>箱型</label><select><option>标准箱 60×40×40</option><option>小箱 40×30×30</option><option>大箱 80×60×60</option></select></div>
+<div class="notice" id="employeeWelcome">—</div>
+<div class="row3" style="margin-top:12px">
+<div><label>客户编号</label><input id="shipCustomerCode" placeholder="例如 C01238"/></div>
+<div><label>客户名称 / 店铺</label><input id="shipCustomerName" placeholder="客户名称"/></div>
+<div><label>箱数</label><input id="shipBoxes" type="number" min="0" value="1"/></div>
+<div><label>箱型</label><select id="shipBoxType"><option>标准箱 60×40×40</option><option>小箱 40×30×30</option><option>大箱 80×60×60</option></select></div>
 <div><label>承运商</label><select id="warehouseCarrier" class="carrierSelect"></select></div>
 </div>
 <div style="margin-top:14px"><label>是否打板</label><div class="switches"><label><input type="radio" name="pal" value="no" checked> 不打板</label><label><input type="radio" name="pal" value="yes"> 打板</label></div></div>
@@ -75,9 +100,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="row"><div><label>板数</label><select id="palletCount"><option value="1">1 板</option><option value="2">2 板</option><option value="3">3 板</option><option value="4">4 板</option><option value="5">5 板</option><option value="6">6 板</option><option value="7">7 板</option><option value="8">8 板</option><option value="9">9 板</option><option value="10">10 板</option></select></div><div><label>托盘规格</label><input value="EPAL 120 × 80 cm" readonly></div></div>
 <div id="palletRows" class="pallets"></div>
 </div>
-<div class="row" style="margin-top:12px"><div><label>照片</label><input type="file" accept="image/*" capture="environment"></div><div><label>备注</label><input placeholder="破损、特殊包装等"></div></div>
-<div class="actions" style="margin-top:14px"><button class="btn primary" id="saveShipment">保存记录</button><button class="btn">清空</button></div>
+<div class="row" style="margin-top:12px"><div><label>照片</label><input type="file" accept="image/*" capture="environment"></div><div><label>备注</label><input id="shipNotes" placeholder="破损、特殊包装等"></div></div>
+<div class="actions" style="margin-top:14px"><button class="btn primary" id="saveShipment">保存记录</button><button class="btn" id="clearShipmentBtn">清空</button></div>
 <div class="footerNote">EPAL 底板高度按 15 cm；货物高度 = 实际总高度 − 15 cm。</div>
+</div>
 </div>
 </section>
 
@@ -104,17 +130,20 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div class="card"><h3>Tariffario 上传</h3><div class="notice">选择任意承运商并上传 PDF / Excel / CSV。测试版会尝试从文件文字中识别 IS、L、FUEL、COD 等附加费，并自动写入“附加费”页面；无法确定的项目会标记为待确认。</div>
 <div class="row3" style="margin-top:14px"><div><label>承运商</label><select id="tariffCarrier" class="carrierSelect"></select></div><div><label>生效日期</label><input id="tariffDate" type="date" value="2026-10-01"></div><div><label>文件</label><input id="tariffFile" type="file" accept=".pdf,.xlsx,.xls,.csv,.txt"></div></div>
 <div class="actions" style="margin-top:14px"><button class="btn primary" id="parseTariffBtn">上传并解析</button><button class="btn" id="addCarrierFromTariffBtn">+ 新增承运商</button></div>
-<div id="tariffParseResult" class="notice" style="display:none;margin-top:12px"></div>
+<div id="tariffParseResult" class="notice" style="display:none;margin-top:12px"></div><div id="tariffHistory" style="margin-top:12px"></div>
 </div></section>
 
 <section id="surcharges" class="section">
-<div class="card"><div class="actions" style="justify-content:space-between"><h3 style="margin:0">附加费规则</h3><button class="btn primary" onclick="addSurcharge()">+ 新增代码</button></div>
-<table id="surchargeTable"><thead><tr><th>承运商</th><th>代码</th><th>名称</th><th>计算方式</th><th>数值</th><th>生效月</th><th>状态</th></tr></thead><tbody id="surchargeBody"></tbody></table></div></section>
+<div class="card">
+  <h3 style="margin:0">附加费</h3>
+  <div class="notice" style="margin-top:12px">这里不预先创建任何附加费。只有上传某个快递公司的 Tariffario 后，才会在该快递公司分组下面生成识别到的附加费。</div>
+  <div id="surchargeGroups" style="margin-top:12px"></div>
+</div>
+</section>
 
 <section id="invoices" class="section">
 <div class="card"><h3>PDF 发票上传</h3><div class="notice">正式版会自动提取运单号、计费重量、基础运费、燃油费、COD、IS/L 等附加费和最终金额，再与理论价格逐票匹配。</div>
-<div class="row" style="margin-top:14px"><div><label>承运商</label><select id="invoiceCarrier" class="carrierSelect"></select></div><div><label>PDF 发票</label><input type="file" accept=".pdf" multiple></div></div>
-<div class="actions" style="margin-top:14px"><button class="btn primary">上传并解析 PDF</button></div></div>
+<div class="row" style="margin-top:14px"><div><label>承运商</label><select id="invoiceCarrier" class="carrierSelect"></select></div><div><label>PDF 发票</label><input id="invoiceFile" type="file" accept=".pdf"></div></div><div class="actions" style="margin-top:14px"><button class="btn primary" id="parseInvoiceBtn">上传并解析 PDF</button></div><div id="invoiceParseResult" class="notice" style="display:none;margin-top:12px"></div></div>
 </section>
 
 <section id="audit" class="section">
@@ -127,7 +156,11 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 <section id="settings" class="section">
 <div class="card"><h3>公司设置</h3><div class="row3"><div><label>公司名称</label><input value="HD GROUP SRL"></div><div><label>仓库数量</label><input type="number" value="10"></div><div><label>默认语言</label><select><option>中文</option><option>Italiano</option></select></div></div></div>
-<div class="card" style="margin-top:14px"><h3>员工与权限</h3><table><thead><tr><th>姓名</th><th>角色</th><th>仓库</th><th>权限</th></tr></thead><tbody><tr><td>Mario</td><td>仓库员工</td><td>Roma Est</td><td>仅录入</td></tr><tr><td>Alessandro</td><td>管理员</td><td>全部</td><td>全部</td></tr></tbody></table></div>
+<div class="card" style="margin-top:14px">
+  <div class="actions" style="justify-content:space-between;align-items:center"><h3 style="margin:0">员工与权限</h3><button class="btn primary" id="addEmployeeBtn">+ 新增员工</button></div>
+  <div style="overflow:auto;margin-top:10px"><table><thead><tr><th>用户名</th><th>姓名</th><th>角色</th><th>仓库</th><th>权限</th><th>状态</th></tr></thead><tbody id="employeeTableBody"></tbody></table></div>
+  <div class="footerNote">当前为前端 Demo 登录。真正跨手机/多员工安全登录需要接共享后台数据库与服务器认证。</div>
+</div>
 </section>
 </main>
 </div>
@@ -260,7 +293,22 @@ it:{
 "选择任意承运商并上传 PDF / Excel / CSV。测试版会尝试从文件文字中识别 IS、L、FUEL、COD 等附加费，并自动写入“附加费”页面；无法确定的项目会标记为待确认。":"Seleziona un corriere e carica PDF / Excel / CSV. Il demo prova a riconoscere IS, L, FUEL, COD e altri supplementi e li inserisce automaticamente; gli elementi incerti vengono marcati da verificare.",
 "+ 新增承运商":"+ Aggiungi corriere",
 "待确认":"Da verificare",
-"已确认":"Confermato"
+"已确认":"Confermato",
+"录入记录":"Registrazioni",
+"仓库录入记录":"Registrazioni magazzino",
+"后台只查看员工提交结果，不显示手机端录入表单。":"Il back office mostra solo i dati inviati dai dipendenti; il modulo di inserimento resta sul mobile.",
+"时间":"Ora",
+"员工":"Dipendente",
+"客户 / 店铺":"Cliente / negozio",
+"快递":"Corriere",
+"板数":"Pallet",
+"尺寸 / 重量":"Dimensioni / peso",
+"这里不预先创建任何附加费。只有上传某个快递公司的 Tariffario 后，才会在该快递公司分组下面生成识别到的附加费。":"Nessun supplemento viene precompilato. I supplementi compaiono solo dopo il caricamento del Tariffario del relativo corriere.",
+"+ 新增员工":"+ Aggiungi dipendente",
+"用户名":"Utente",
+"状态":"Stato",
+"启用":"Attivo",
+"员工登录":"Accesso dipendenti"
 }
 };
 
@@ -281,8 +329,8 @@ function captureI18n(){
 let currentLang=localStorage.getItem('hdLanguage')||'zh';
 function tr(base,lang){return (I18N[lang]&&I18N[lang][base])||base}
 function pageTitle(page){
-  const zh={dashboard:"总览",warehouse:"仓库录入",packages:"箱型 / 托盘",carriers:"快递公司",tariffs:"价目表",surcharges:"附加费",invoices:"PDF 发票",audit:"自动对账",settings:"公司 / 员工"};
-  const it={dashboard:"Dashboard",warehouse:"Registrazione magazzino",packages:"Colli / pallet",carriers:"Corrieri",tariffs:"Tariffario",surcharges:"Supplementi",invoices:"Fatture PDF",audit:"Riconciliazione",settings:"Azienda / dipendenti"};
+  const zh={dashboard:"总览",records:"录入记录",warehouse:"仓库录入",packages:"箱型 / 托盘",carriers:"快递公司",tariffs:"价目表",surcharges:"附加费",invoices:"PDF 发票",audit:"自动对账",settings:"公司 / 员工"};
+  const it={dashboard:"Dashboard",records:"Registrazioni",warehouse:"Registrazione magazzino",packages:"Colli / pallet",carriers:"Corrieri",tariffs:"Tariffario",surcharges:"Supplementi",invoices:"Fatture PDF",audit:"Riconciliazione",settings:"Azienda / dipendenti"};
   return (currentLang==='it'?it:zh)[page];
 }
 function applyLanguage(lang){
@@ -299,7 +347,7 @@ function applyLanguage(lang){
   document.getElementById('languageSelect').value=lang;
   const active=document.querySelector('#nav button.active');
   if(active) document.getElementById('title').textContent=pageTitle(active.dataset.page);
-  if(block.style.display==='block') renderPallets(); if(typeof renderCarrierGrid==='function')renderCarrierGrid(); if(typeof renderSurcharges==='function')renderSurcharges();
+  if(block.style.display==='block') renderPallets(); if(typeof renderCarrierGrid==='function')renderCarrierGrid(); if(typeof renderSurcharges==='function')renderSurcharges(); if(typeof renderTariffHistory==='function')renderTariffHistory(); if(typeof renderEmployees==='function')renderEmployees(); if(typeof renderShipmentRecords==='function')renderShipmentRecords(); if(currentUser)document.getElementById('currentUserPill').textContent=currentUser.name+' · '+roleLabel(currentUser.role);
 }
 document.querySelectorAll('#nav button').forEach(function(b){
   b.onclick=function(){
@@ -342,13 +390,6 @@ palRadios.forEach(function(r){
   };
 });
 count.onchange=renderPallets;
-document.getElementById('saveShipment').onclick=function(){
-  const n=+(localStorage.getItem('demoShipCount')||128)+1;
-  localStorage.setItem('demoShipCount',n);
-  document.getElementById('mShip').textContent=n;
-  alert(currentLang==='it'?'Registrazione demo salvata in questo browser. La versione completa userà un database condiviso.':'测试记录已保存到当前浏览器。正式版会写入共享数据库。');
-};
-document.getElementById('mShip').textContent=localStorage.getItem('demoShipCount')||128;
 function addPackage(){
   const name=prompt(currentLang==='it'?'Nome del collo, ad esempio: Collo grande':'箱型名称，例如：大箱');
   if(!name)return;
@@ -414,11 +455,7 @@ function getSurcharges(){
     const saved=JSON.parse(localStorage.getItem('hdSurcharges')||'null');
     if(Array.isArray(saved)) return saved;
   }catch(e){}
-  return [
-    {carrier:'BRT',code:'IS',name:'超尺寸 / 特殊处理',method:'fixed',value:'€ 2.50',month:'2026-10',status:'confirmed'},
-    {carrier:'BRT',code:'L',name:'指定附加费',method:'fixed',value:'€ 4.00',month:'2026-10',status:'confirmed'},
-    {carrier:'BRT',code:'FUEL',name:'燃油附加费',method:'percent',value:'12.5%',month:'2026-10',status:'confirmed'}
-  ];
+  return [];
 }
 function saveSurcharges(rows){localStorage.setItem('hdSurcharges',JSON.stringify(rows));}
 function surchargeName(code){
@@ -427,17 +464,49 @@ function surchargeName(code){
   return (currentLang==='it'?it:zh)[code]|| (currentLang==='it'?'Supplemento '+code:'附加费 '+code);
 }
 function renderSurcharges(){
-  const body=document.getElementById('surchargeBody'); if(!body)return;
-  body.innerHTML='';
-  getSurcharges().forEach(function(r){
-    const trEl=document.createElement('tr');
-    const method=currentLang==='it'?(r.method==='percent'?'Percentuale':'Importo fisso'):(r.method==='percent'?'百分比':'固定金额');
-    const status=currentLang==='it'?(r.status==='confirmed'?'Confermato':'Da verificare'):(r.status==='confirmed'?'已确认':'待确认');
-    const tag=r.status==='confirmed'?'ok':'warn';
-    trEl.innerHTML='<td>'+r.carrier+'</td><td>'+r.code+'</td><td>'+surchargeName(r.code)+'</td><td>'+method+'</td><td>'+r.value+'</td><td>'+r.month+'</td><td><span class="tag '+tag+'">'+status+'</span></td>';
-    body.appendChild(trEl);
+  const wrap=document.getElementById('surchargeGroups'); if(!wrap)return;
+  wrap.innerHTML='';
+  const tariffs=getTariffs();
+  if(!tariffs.length){
+    wrap.innerHTML='<div class="muted">'+(currentLang==='it'?'Nessun Tariffario caricato. I supplementi appariranno qui dopo il caricamento.':'还没有上传任何 Tariffario。上传后附加费会按快递公司显示在这里。')+'</div>';
+    return;
+  }
+  const carriers=Array.from(new Set(tariffs.map(function(t){return t.carrier})));
+  carriers.forEach(function(carrier){
+    const box=document.createElement('div'); box.className='groupCard';
+    const rows=getSurcharges().filter(function(r){return r.carrier===carrier});
+    box.innerHTML='<div class="groupHead"><span>'+carrier+'</span><span class="muted">'+(currentLang==='it'?rows.length+' supplementi':rows.length+' 项附加费')+'</span></div><div class="groupBody"><table><thead><tr><th>'+(currentLang==='it'?'Codice':'代码')+'</th><th>'+(currentLang==='it'?'Nome':'名称')+'</th><th>'+(currentLang==='it'?'Metodo':'计算方式')+'</th><th>'+(currentLang==='it'?'Valore':'数值')+'</th><th>'+(currentLang==='it'?'Mese':'生效月')+'</th><th>'+(currentLang==='it'?'Stato':'状态')+'</th></tr></thead><tbody></tbody></table></div>';
+    const tbody=box.querySelector('tbody');
+    if(!rows.length){
+      tbody.innerHTML='<tr><td colspan="6" class="muted">'+(currentLang==='it'?'Nessun supplemento riconosciuto in questo Tariffario.':'这个 Tariffario 暂未识别到附加费。')+'</td></tr>';
+    } else rows.forEach(function(r){
+      const method=currentLang==='it'?(r.method==='percent'?'Percentuale':'Importo fisso'):(r.method==='percent'?'百分比':'固定金额');
+      const status=currentLang==='it'?(r.status==='confirmed'?'Confermato':'Da verificare'):(r.status==='confirmed'?'已确认':'待确认');
+      const tag=r.status==='confirmed'?'ok':'warn';
+      const trEl=document.createElement('tr');
+      trEl.innerHTML='<td>'+r.code+'</td><td>'+surchargeName(r.code)+'</td><td>'+method+'</td><td>'+r.value+'</td><td>'+r.month+'</td><td><span class="tag '+tag+'">'+status+'</span></td>';
+      tbody.appendChild(trEl);
+    });
+    wrap.appendChild(box);
   });
 }
+function getTariffs(){try{return JSON.parse(localStorage.getItem('hdTariffs')||'[]')}catch(e){return []}}
+function renderTariffHistory(){
+  const wrap=document.getElementById('tariffHistory'); if(!wrap)return;
+  const list=getTariffs();
+  wrap.innerHTML='';
+  if(!list.length)return;
+  const carriers=Array.from(new Set(list.map(function(x){return x.carrier})));
+  carriers.forEach(function(c){
+    const box=document.createElement('div');box.className='groupCard';
+    const items=list.filter(function(x){return x.carrier===c});
+    box.innerHTML='<div class="groupHead"><span>'+c+'</span><span class="muted">'+items.length+' Tariffario</span></div><div class="groupBody"></div>';
+    const body=box.querySelector('.groupBody');
+    items.forEach(function(x){body.insertAdjacentHTML('beforeend','<div style="padding:9px 0;border-bottom:1px solid var(--line)"><b>'+x.file+'</b><div class="muted">'+x.date+' · '+x.detected+' '+(currentLang==='it'?'supplementi rilevati':'项附加费')+'</div></div>')});
+    wrap.appendChild(box);
+  });
+}
+
 async function extractTariffText(file){
   const ext=(file.name.split('.').pop()||'').toLowerCase();
   if(ext==='pdf' && window.pdfjsLib){
@@ -479,6 +548,16 @@ function detectSurcharges(text,carrier,month){
   });
   return found;
 }
+function detectCarrierFromText(text){
+  const u=String(text||'').toUpperCase();
+  if(/\bBRT\b|BARTOLINI/.test(u))return 'BRT';
+  if(/\bGLS\b|GENERAL LOGISTICS SYSTEMS/.test(u))return 'GLS';
+  if(/\bFEDEX\b|FEDERAL EXPRESS/.test(u))return 'FedEx';
+  if(/\bDHL\b/.test(u))return 'DHL';
+  if(/\bSDA\b|POSTE ITALIANE/.test(u))return 'SDA';
+  return null;
+}
+function sameCarrier(a,b){return String(a||'').toLowerCase()===String(b||'').toLowerCase()}
 async function parseTariff(){
   const file=document.getElementById('tariffFile').files[0];
   const carrier=document.getElementById('tariffCarrier').value;
@@ -489,26 +568,163 @@ async function parseTariff(){
   box.style.display='block'; box.textContent=currentLang==='it'?'Analisi del file in corso...':'正在解析文件...';
   try{
     const text=await extractTariffText(file);
+    const detectedCarrier=detectCarrierFromText(text);
+    if(detectedCarrier && !sameCarrier(detectedCarrier,carrier)){
+      box.textContent=currentLang==='it'
+        ?('Bloccato: hai selezionato '+carrier+', ma il documento sembra appartenere a '+detectedCarrier+'. Nessun dato è stato importato.')
+        :('已拦截：你选择的是 '+carrier+'，但文件内容看起来属于 '+detectedCarrier+'。系统没有导入任何数据。');
+      return;
+    }
     const detected=detectSurcharges(text,carrier,month);
     let rows=getSurcharges().filter(function(r){return !(r.carrier===carrier && detected.some(function(d){return d.code===r.code && d.month===r.month}))});
-    rows=rows.concat(detected); saveSurcharges(rows); renderSurcharges();
-    const tariffs=JSON.parse(localStorage.getItem('hdTariffs')||'[]');
-    tariffs.push({carrier:carrier,file:file.name,date:date,detected:detected.length});
-    localStorage.setItem('hdTariffs',JSON.stringify(tariffs)); renderCarrierGrid();
+    rows=rows.concat(detected); saveSurcharges(rows);
+    const tariffs=getTariffs();
+    tariffs.push({carrier:carrier,file:file.name,date:date,detected:detected.length,validated:detectedCarrier||'manual'});
+    localStorage.setItem('hdTariffs',JSON.stringify(tariffs));
+    renderCarrierGrid();renderSurcharges();renderTariffHistory();
     box.textContent=currentLang==='it'
-      ?('Tariffario '+carrier+' acquisito. Supplementi riconosciuti automaticamente: '+detected.length+'. '+(detected.some(function(x){return x.status==='review'})?'Alcuni valori richiedono verifica.':''))
-      :('已导入 '+carrier+' tariffario。自动识别附加费：'+detected.length+' 项。'+(detected.some(function(x){return x.status==='review'})?'部分数值需要确认。':''));
+      ?('Tariffario '+carrier+' importato e vincolato a '+carrier+'. Supplementi riconosciuti: '+detected.length+'.')
+      :('已导入 '+carrier+' Tariffario，并固定绑定到 '+carrier+'。识别附加费：'+detected.length+' 项。');
   }catch(err){
-    box.textContent=currentLang==='it'?'Non sono riuscito a leggere automaticamente questo file nel demo. Il corriere resta comunque disponibile; nella versione server il parsing PDF sarà gestito dal backend.':'这个测试版暂时无法自动读取该文件。快递公司仍会保留；正式服务器版会由后台解析 PDF。';
+    box.textContent=currentLang==='it'?'Non sono riuscito a leggere automaticamente questo file nel demo. Nessun dato è stato assegnato a un altro corriere.':'这个测试版暂时无法自动读取该文件，并且不会把数据自动归到其他快递公司。';
   }
 }
+async function parseInvoice(){
+  const file=document.getElementById('invoiceFile').files[0];
+  const carrier=document.getElementById('invoiceCarrier').value;
+  const box=document.getElementById('invoiceParseResult');
+  if(!file){alert(currentLang==='it'?'Seleziona prima una fattura PDF.':'请先选择 PDF 发票。');return;}
+  box.style.display='block';box.textContent=currentLang==='it'?'Controllo corriere del documento...':'正在核对发票所属快递公司...';
+  try{
+    const text=await extractTariffText(file);
+    const detectedCarrier=detectCarrierFromText(text);
+    if(detectedCarrier && !sameCarrier(detectedCarrier,carrier)){
+      box.textContent=currentLang==='it'
+        ?('Bloccato: hai selezionato '+carrier+', ma la fattura sembra di '+detectedCarrier+'. La fattura non è stata importata.')
+        :('已拦截：你选择的是 '+carrier+'，但这张发票看起来属于 '+detectedCarrier+'。系统没有导入。');
+      return;
+    }
+    const invoices=JSON.parse(localStorage.getItem('hdInvoices')||'[]');
+    invoices.push({carrier:carrier,file:file.name,validated:detectedCarrier||'manual',date:new Date().toISOString()});
+    localStorage.setItem('hdInvoices',JSON.stringify(invoices));
+    box.textContent=currentLang==='it'
+      ?('Fattura acquisita e vincolata a '+carrier+'. Il corriere non verrà cambiato automaticamente.')
+      :('发票已导入并固定绑定到 '+carrier+'，系统不会自动改成其他快递公司。');
+  }catch(e){
+    box.textContent=currentLang==='it'?'File non leggibile nel demo; nessuna assegnazione automatica è stata effettuata.':'测试版无法读取该文件，因此没有自动归类到任何其他快递公司。';
+  }
+}
+
 document.getElementById('addCarrierBtn').onclick=addCarrier;
 document.getElementById('addCarrierFromTariffBtn').onclick=addCarrier;
 document.getElementById('parseTariffBtn').onclick=parseTariff;
-populateCarrierSelects(); renderCarrierGrid(); renderSurcharges();
+document.getElementById('parseInvoiceBtn').onclick=parseInvoice;
+populateCarrierSelects(); renderCarrierGrid(); renderSurcharges(); renderTariffHistory();
 
+
+const DEFAULT_EMPLOYEES=[
+ {username:'Alessandro',name:'Alessandro',pin:'1234',role:'admin',warehouse:'Tutti',permissions:['all'],active:true},
+ {username:'Mario',name:'Mario',pin:'1111',role:'entry',warehouse:'Roma Est',permissions:['entry'],active:true},
+ {username:'Luca',name:'Luca',pin:'2222',role:'entry_edit',warehouse:'Roma Est',permissions:['entry','edit_own'],active:true}
+];
+function getEmployees(){try{const x=JSON.parse(localStorage.getItem('hdEmployees')||'null');return Array.isArray(x)?x:DEFAULT_EMPLOYEES.slice()}catch(e){return DEFAULT_EMPLOYEES.slice()}}
+function saveEmployees(x){localStorage.setItem('hdEmployees',JSON.stringify(x))}
+let currentUser=null;
+function roleLabel(role){
+ if(currentLang==='it') return role==='admin'?'Amministratore':role==='entry_edit'?'Inserimento + modifica propri dati':'Solo inserimento';
+ return role==='admin'?'管理员':role==='entry_edit'?'录入 + 修改自己的记录':'仅录入';
+}
+function renderEmployees(){
+ const body=document.getElementById('employeeTableBody');if(!body)return;body.innerHTML='';
+ getEmployees().forEach(function(e){
+   const tr=document.createElement('tr');
+   tr.innerHTML='<td>'+e.username+'</td><td>'+e.name+'</td><td>'+roleLabel(e.role)+'</td><td>'+e.warehouse+'</td><td>'+e.permissions.join(', ')+'</td><td><span class="tag '+(e.active?'ok':'bad')+'">'+(e.active?(currentLang==='it'?'Attivo':'启用'):(currentLang==='it'?'Disattivato':'停用'))+'</span></td>';
+   body.appendChild(tr);
+ });
+}
+function addEmployee(){
+ const username=prompt(currentLang==='it'?'Nome utente':'用户名');if(!username)return;
+ const name=prompt(currentLang==='it'?'Nome dipendente':'员工姓名')||username;
+ const pin=prompt(currentLang==='it'?'PIN demo':'Demo PIN')||'0000';
+ const roleRaw=prompt(currentLang==='it'?'Ruolo: admin / entry / entry_edit':'角色：admin / entry / entry_edit')||'entry';
+ const role=['admin','entry','entry_edit'].indexOf(roleRaw)>=0?roleRaw:'entry';
+ const warehouse=prompt(currentLang==='it'?'Magazzino':'仓库')||'Roma Est';
+ const list=getEmployees();
+ list.push({username:username,name:name,pin:pin,role:role,warehouse:warehouse,permissions:role==='admin'?['all']:role==='entry_edit'?['entry','edit_own']:['entry'],active:true});
+ saveEmployees(list);renderEmployees();
+}
+function login(){
+ const company=document.getElementById('loginCompany').value.trim().toUpperCase();
+ const u=document.getElementById('loginUser').value.trim();
+ const p=document.getElementById('loginPass').value;
+ const emp=getEmployees().find(function(e){return e.active&&e.username.toLowerCase()===u.toLowerCase()&&e.pin===p});
+ if(company!=='HDGROUP'||!emp){document.getElementById('loginError').textContent=currentLang==='it'?'Credenziali non valide.':'登录信息不正确。';return;}
+ currentUser=emp;localStorage.setItem('hdSessionUser',emp.username);enterApp();
+}
+function restoreSession(){
+ const u=localStorage.getItem('hdSessionUser');if(!u)return;
+ const emp=getEmployees().find(function(e){return e.active&&e.username===u});if(emp){currentUser=emp;enterApp();}
+}
+function enterApp(){
+ document.getElementById('loginScreen').classList.add('hidden');
+ document.getElementById('currentUserPill').textContent=currentUser.name+' · '+roleLabel(currentUser.role);
+ if(currentUser.role==='admin'){
+   document.querySelector('.side').classList.remove('hidden');
+   document.querySelector('.main').classList.remove('mobileOnlyShell');
+   document.querySelector('[data-page="dashboard"]').click();
+ }else{
+   document.querySelector('.side').classList.add('hidden');
+   document.querySelector('.main').classList.add('mobileOnlyShell');
+   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active')});
+   document.getElementById('warehouse').classList.add('active');
+   document.getElementById('title').textContent=pageTitle('warehouse');
+   document.getElementById('employeeWelcome').textContent=(currentLang==='it'?'Connesso come ':'当前登录：')+currentUser.name+' · '+currentUser.warehouse;
+ }
+ renderEmployees();renderShipmentRecords();
+}
+function logout(){localStorage.removeItem('hdSessionUser');currentUser=null;document.getElementById('loginScreen').classList.remove('hidden');document.querySelector('.side').classList.remove('hidden');}
+function getShipmentRecords(){try{return JSON.parse(localStorage.getItem('hdShipmentRecords')||'[]')}catch(e){return []}}
+function renderShipmentRecords(){
+ const body=document.getElementById('shipmentRecordsBody');if(!body)return;body.innerHTML='';
+ const list=getShipmentRecords().slice().reverse();
+ if(!list.length){body.innerHTML='<tr><td colspan="8" class="muted">'+(currentLang==='it'?'Nessuna registrazione ancora.':'还没有员工提交记录。')+'</td></tr>';return;}
+ list.forEach(function(r){
+  const tr=document.createElement('tr');
+  tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.employee+'</td><td>'+r.customer+'</td><td>'+r.carrier+'</td><td>'+r.boxes+'</td><td>'+r.pallets+'</td><td>'+r.detail+'</td><td>'+(r.notes||'—')+'</td>';
+  body.appendChild(tr);
+ });
+}
+function collectPalletDetail(){
+ const items=[];document.querySelectorAll('#palletRows .pallet').forEach(function(p,i){
+   const inputs=p.querySelectorAll('input');items.push((i+1)+': '+(inputs[0].value||'—')+'cm / '+(inputs[1].value||'—')+'kg');
+ });
+ return items.join(' ; ');
+}
+document.getElementById('saveShipment').onclick=function(){
+ if(!currentUser){return;}
+ const palYes=document.querySelector('input[name=pal]:checked').value==='yes';
+ const pallets=palYes?Number(document.getElementById('palletCount').value):0;
+ const customer=(document.getElementById('shipCustomerCode').value+' '+document.getElementById('shipCustomerName').value).trim()||'—';
+ const boxes=Number(document.getElementById('shipBoxes').value||0);
+ const type=document.getElementById('shipBoxType').value;
+ const detail=(type||'')+(palYes?(' | '+collectPalletDetail()):'');
+ const list=getShipmentRecords();
+ list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,carrier:document.getElementById('warehouseCarrier').value,boxes:boxes,pallets:pallets,detail:detail,notes:document.getElementById('shipNotes').value});
+ localStorage.setItem('hdShipmentRecords',JSON.stringify(list));
+ document.getElementById('mShip').textContent=Number(document.getElementById('mShip').textContent||0)+1;
+ alert(currentLang==='it'?'Registrazione salvata.':'录入已保存。');
+ renderShipmentRecords();
+};
+document.getElementById('clearShipmentBtn').onclick=function(){
+ ['shipCustomerCode','shipCustomerName','shipNotes'].forEach(function(id){document.getElementById(id).value=''});document.getElementById('shipBoxes').value=1;
+};
+document.getElementById('loginBtn').onclick=login;
+document.getElementById('logoutBtn').onclick=logout;
+document.getElementById('addEmployeeBtn').onclick=addEmployee;
+document.getElementById('loginPass').addEventListener('keydown',function(e){if(e.key==='Enter')login()});
+renderEmployees();renderShipmentRecords();
 captureI18n();
 document.getElementById('languageSelect').addEventListener('change',function(e){applyLanguage(e.target.value)});
-applyLanguage(currentLang);
+applyLanguage(currentLang);restoreSession();
 </script>
 </body></html>
