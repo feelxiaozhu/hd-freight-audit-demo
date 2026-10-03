@@ -21,6 +21,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 .footerNote{font-size:11px;color:#8a94a6;margin-top:12px}
 @media(max-width:900px){.app{display:block}.side{position:static;height:auto;padding:10px}.brand{padding:4px 8px 10px}.nav{display:flex;overflow:auto;gap:6px}.nav button{white-space:nowrap;width:auto}.main{padding:14px}.grid{grid-template-columns:repeat(2,1fr)}.row,.row3{grid-template-columns:1fr}.top{align-items:flex-start}.pill{display:none}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -66,7 +68,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div><label>客户名称</label><input placeholder="客户名称"/></div>
 <div><label>箱数</label><input type="number" min="0" value="1"/></div>
 <div><label>箱型</label><select><option>标准箱 60×40×40</option><option>小箱 40×30×30</option><option>大箱 80×60×60</option></select></div>
-<div><label>承运商</label><select><option>BRT</option><option>GLS</option><option>FedEx</option><option>DHL</option></select></div>
+<div><label>承运商</label><select id="warehouseCarrier" class="carrierSelect"></select></div>
 </div>
 <div style="margin-top:14px"><label>是否打板</label><div class="switches"><label><input type="radio" name="pal" value="no" checked> 不打板</label><label><input type="radio" name="pal" value="yes"> 打板</label></div></div>
 <div id="palletBlock" style="display:none;margin-top:12px">
@@ -89,30 +91,29 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </section>
 
 <section id="carriers" class="section">
-<div class="grid">
-<div class="card"><h3>BRT</h3><p class="muted">已启用 · 计价规则可配置</p><button class="btn">编辑</button></div>
-<div class="card"><h3>GLS</h3><p class="muted">已启用</p><button class="btn">编辑</button></div>
-<div class="card"><h3>FedEx</h3><p class="muted">未配置 tariffario</p><button class="btn">编辑</button></div>
-<div class="card"><h3>DHL</h3><p class="muted">未启用</p><button class="btn">编辑</button></div>
-</div></section>
+<div class="card">
+<div class="actions" style="justify-content:space-between;align-items:center">
+<div><h3 style="margin:0">快递公司</h3><p class="muted" style="margin:6px 0 0">新增后会自动同步到仓库录入、Tariffario 和发票上传。</p></div>
+<button class="btn primary" id="addCarrierBtn">+ 新增快递公司</button>
+</div>
+</div>
+<div class="grid" id="carrierGrid" style="margin-top:14px"></div>
+</section>
 
 <section id="tariffs" class="section">
-<div class="card"><h3>Tariffario 上传</h3><div class="notice">每家批发商上传自己的合同价。正式版会识别重量段、区域、省份、箱/板计价和生效日期，并保留历史版本。</div>
-<div class="row3" style="margin-top:14px"><div><label>承运商</label><select><option>BRT</option><option>GLS</option></select></div><div><label>生效日期</label><input type="date" value="2026-10-01"></div><div><label>文件</label><input type="file" accept=".pdf,.xlsx,.xls,.csv"></div></div>
-<div class="actions" style="margin-top:14px"><button class="btn primary">上传并解析</button></div>
+<div class="card"><h3>Tariffario 上传</h3><div class="notice">选择任意承运商并上传 PDF / Excel / CSV。测试版会尝试从文件文字中识别 IS、L、FUEL、COD 等附加费，并自动写入“附加费”页面；无法确定的项目会标记为待确认。</div>
+<div class="row3" style="margin-top:14px"><div><label>承运商</label><select id="tariffCarrier" class="carrierSelect"></select></div><div><label>生效日期</label><input id="tariffDate" type="date" value="2026-10-01"></div><div><label>文件</label><input id="tariffFile" type="file" accept=".pdf,.xlsx,.xls,.csv,.txt"></div></div>
+<div class="actions" style="margin-top:14px"><button class="btn primary" id="parseTariffBtn">上传并解析</button><button class="btn" id="addCarrierFromTariffBtn">+ 新增承运商</button></div>
+<div id="tariffParseResult" class="notice" style="display:none;margin-top:12px"></div>
 </div></section>
 
 <section id="surcharges" class="section">
 <div class="card"><div class="actions" style="justify-content:space-between"><h3 style="margin:0">附加费规则</h3><button class="btn primary" onclick="addSurcharge()">+ 新增代码</button></div>
-<table id="surchargeTable"><thead><tr><th>代码</th><th>名称</th><th>计算方式</th><th>数值</th><th>生效月</th></tr></thead><tbody>
-<tr><td>IS</td><td>超尺寸 / 特殊处理</td><td>固定金额</td><td>€ 2.50</td><td>2026-10</td></tr>
-<tr><td>L</td><td>指定附加费</td><td>固定金额</td><td>€ 4.00</td><td>2026-10</td></tr>
-<tr><td>FUEL</td><td>燃油附加费</td><td>百分比</td><td>12.5%</td><td>2026-10</td></tr>
-</tbody></table></div></section>
+<table id="surchargeTable"><thead><tr><th>承运商</th><th>代码</th><th>名称</th><th>计算方式</th><th>数值</th><th>生效月</th><th>状态</th></tr></thead><tbody id="surchargeBody"></tbody></table></div></section>
 
 <section id="invoices" class="section">
 <div class="card"><h3>PDF 发票上传</h3><div class="notice">正式版会自动提取运单号、计费重量、基础运费、燃油费、COD、IS/L 等附加费和最终金额，再与理论价格逐票匹配。</div>
-<div class="row" style="margin-top:14px"><div><label>承运商</label><select><option>BRT</option><option>GLS</option></select></div><div><label>PDF 发票</label><input type="file" accept=".pdf" multiple></div></div>
+<div class="row" style="margin-top:14px"><div><label>承运商</label><select id="invoiceCarrier" class="carrierSelect"></select></div><div><label>PDF 发票</label><input type="file" accept=".pdf" multiple></div></div>
 <div class="actions" style="margin-top:14px"><button class="btn primary">上传并解析 PDF</button></div></div>
 </section>
 
@@ -252,7 +253,14 @@ it:{
 "例如 145":"es. 145",
 "例如 318":"es. 318",
 "自动计算":"calcolo automatico",
-"自定义附加费":"Supplemento personalizzato"
+"自定义附加费":"Supplemento personalizzato",
+"快递公司":"Corrieri",
+"新增后会自动同步到仓库录入、Tariffario 和发票上传。":"Dopo l'aggiunta sarà disponibile automaticamente in magazzino, Tariffario e fatture.",
+"+ 新增快递公司":"+ Aggiungi corriere",
+"选择任意承运商并上传 PDF / Excel / CSV。测试版会尝试从文件文字中识别 IS、L、FUEL、COD 等附加费，并自动写入“附加费”页面；无法确定的项目会标记为待确认。":"Seleziona un corriere e carica PDF / Excel / CSV. Il demo prova a riconoscere IS, L, FUEL, COD e altri supplementi e li inserisce automaticamente; gli elementi incerti vengono marcati da verificare.",
+"+ 新增承运商":"+ Aggiungi corriere",
+"待确认":"Da verificare",
+"已确认":"Confermato"
 }
 };
 
@@ -291,7 +299,7 @@ function applyLanguage(lang){
   document.getElementById('languageSelect').value=lang;
   const active=document.querySelector('#nav button.active');
   if(active) document.getElementById('title').textContent=pageTitle(active.dataset.page);
-  if(block.style.display==='block') renderPallets();
+  if(block.style.display==='block') renderPallets(); if(typeof renderCarrierGrid==='function')renderCarrierGrid(); if(typeof renderSurcharges==='function')renderSurcharges();
 }
 document.querySelectorAll('#nav button').forEach(function(b){
   b.onclick=function(){
@@ -349,10 +357,156 @@ function addPackage(){
 function addSurcharge(){
   const code=prompt(currentLang==='it'?'Codice supplemento, ad esempio: COD':'附加费代码，例如：COD');
   if(!code)return;
-  const name=currentLang==='it'?'Supplemento personalizzato':'自定义附加费';
-  const method=currentLang==='it'?'Importo fisso':'固定金额';
-  document.querySelector('#surchargeTable tbody').insertAdjacentHTML('beforeend','<tr><td>'+code+'</td><td>'+name+'</td><td>'+method+'</td><td>€ 0.00</td><td>2026-10</td></tr>');
+  const carrier=document.getElementById('tariffCarrier').value||getCarriers()[0];
+  const rows=getSurcharges();
+  rows.push({carrier:carrier,code:code.trim().toUpperCase(),name:code,method:'fixed',value:'€ 0.00',month:(document.getElementById('tariffDate').value||'2026-10-01').slice(0,7),status:'review'});
+  saveSurcharges(rows);renderSurcharges();
 }
+
+const DEFAULT_CARRIERS=['BRT','GLS','FedEx','DHL'];
+function getCarriers(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('hdCarriers')||'[]');
+    return Array.from(new Set(DEFAULT_CARRIERS.concat(saved).map(function(x){return String(x).trim()}).filter(Boolean)));
+  }catch(e){return DEFAULT_CARRIERS.slice();}
+}
+function saveCarriers(list){
+  const custom=list.filter(function(x){return DEFAULT_CARRIERS.indexOf(x)<0});
+  localStorage.setItem('hdCarriers',JSON.stringify(custom));
+}
+function populateCarrierSelects(){
+  const list=getCarriers();
+  document.querySelectorAll('.carrierSelect').forEach(function(sel){
+    const prev=sel.value;
+    sel.innerHTML='';
+    list.forEach(function(name){
+      const o=document.createElement('option');o.value=name;o.textContent=name;sel.appendChild(o);
+    });
+    if(list.indexOf(prev)>=0) sel.value=prev;
+  });
+}
+function renderCarrierGrid(){
+  const grid=document.getElementById('carrierGrid'); if(!grid)return;
+  grid.innerHTML='';
+  getCarriers().forEach(function(name){
+    const card=document.createElement('div');card.className='card';
+    const hasTariff=(JSON.parse(localStorage.getItem('hdTariffs')||'[]')).some(function(t){return t.carrier===name});
+    const status=currentLang==='it'?(hasTariff?'Tariffario caricato':'Tariffario non ancora caricato'):(hasTariff?'已上传 tariffario':'尚未上传 tariffario');
+    card.innerHTML='<h3>'+name+'</h3><p class="muted">'+status+'</p><button class="btn" data-carrier="'+name+'">'+(currentLang==='it'?'Usa nel Tariffario':'上传该快递 tariffario')+'</button>';
+    card.querySelector('button').onclick=function(){
+      document.querySelector('[data-page="tariffs"]').click();
+      document.getElementById('tariffCarrier').value=name;
+    };
+    grid.appendChild(card);
+  });
+}
+function addCarrier(){
+  const name=prompt(currentLang==='it'?'Nome del nuovo corriere':'请输入新的快递公司名称');
+  if(!name)return;
+  const clean=name.trim(); if(!clean)return;
+  const list=getCarriers();
+  if(list.map(function(x){return x.toLowerCase()}).indexOf(clean.toLowerCase())<0) list.push(clean);
+  saveCarriers(list); populateCarrierSelects(); renderCarrierGrid();
+  document.getElementById('tariffCarrier').value=clean;
+}
+function getSurcharges(){
+  try{
+    const saved=JSON.parse(localStorage.getItem('hdSurcharges')||'null');
+    if(Array.isArray(saved)) return saved;
+  }catch(e){}
+  return [
+    {carrier:'BRT',code:'IS',name:'超尺寸 / 特殊处理',method:'fixed',value:'€ 2.50',month:'2026-10',status:'confirmed'},
+    {carrier:'BRT',code:'L',name:'指定附加费',method:'fixed',value:'€ 4.00',month:'2026-10',status:'confirmed'},
+    {carrier:'BRT',code:'FUEL',name:'燃油附加费',method:'percent',value:'12.5%',month:'2026-10',status:'confirmed'}
+  ];
+}
+function saveSurcharges(rows){localStorage.setItem('hdSurcharges',JSON.stringify(rows));}
+function surchargeName(code){
+  const zh={IS:'超尺寸 / 特殊处理',L:'指定附加费',FUEL:'燃油附加费',COD:'代收 / Contrassegno'};
+  const it={IS:'Fuori misura / gestione speciale',L:'Supplemento specifico',FUEL:'Supplemento carburante',COD:'Contrassegno / COD'};
+  return (currentLang==='it'?it:zh)[code]|| (currentLang==='it'?'Supplemento '+code:'附加费 '+code);
+}
+function renderSurcharges(){
+  const body=document.getElementById('surchargeBody'); if(!body)return;
+  body.innerHTML='';
+  getSurcharges().forEach(function(r){
+    const trEl=document.createElement('tr');
+    const method=currentLang==='it'?(r.method==='percent'?'Percentuale':'Importo fisso'):(r.method==='percent'?'百分比':'固定金额');
+    const status=currentLang==='it'?(r.status==='confirmed'?'Confermato':'Da verificare'):(r.status==='confirmed'?'已确认':'待确认');
+    const tag=r.status==='confirmed'?'ok':'warn';
+    trEl.innerHTML='<td>'+r.carrier+'</td><td>'+r.code+'</td><td>'+surchargeName(r.code)+'</td><td>'+method+'</td><td>'+r.value+'</td><td>'+r.month+'</td><td><span class="tag '+tag+'">'+status+'</span></td>';
+    body.appendChild(trEl);
+  });
+}
+async function extractTariffText(file){
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  if(ext==='pdf' && window.pdfjsLib){
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const data=new Uint8Array(await file.arrayBuffer());
+    const pdf=await pdfjsLib.getDocument({data:data}).promise;
+    let out='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i); const tc=await page.getTextContent();
+      out+=tc.items.map(function(x){return x.str}).join(' ')+'\n';
+    }
+    return out;
+  }
+  if((ext==='xlsx'||ext==='xls') && window.XLSX){
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+    return wb.SheetNames.map(function(n){return XLSX.utils.sheet_to_csv(wb.Sheets[n])}).join('\n');
+  }
+  return await file.text();
+}
+function detectSurcharges(text,carrier,month){
+  const lines=String(text||'').split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean);
+  const found=[];
+  const seen={};
+  function add(code,line){
+    if(seen[code])return; seen[code]=true;
+    const pct=line.match(/(\d+(?:[.,]\d+)?)\s*%/);
+    const eur=line.match(/€\s*(\d+(?:[.,]\d+)?)/) || line.match(/(\d+(?:[.,]\d+)?)\s*€/);
+    let method='fixed',value='—',status='review';
+    if(pct){method='percent';value=pct[1].replace(',','.')+'%';status='confirmed';}
+    else if(eur){value='€ '+(eur[1]||eur[0]).replace(/[€\s]/g,'').replace(',','.');status='confirmed';}
+    found.push({carrier:carrier,code:code,name:code,method:method,value:value,month:month,status:status});
+  }
+  lines.forEach(function(line){
+    const u=line.toUpperCase();
+    if(/\bIS\b/.test(u)) add('IS',line);
+    if(/\b(FUEL|CARBURANTE|FSC)\b/.test(u)) add('FUEL',line);
+    if(/\b(COD|CONTRASSEGNO)\b/.test(u)) add('COD',line);
+    if((/^L\b/.test(u)||/\bSUPPLEMENTO\s+L\b/.test(u))) add('L',line);
+  });
+  return found;
+}
+async function parseTariff(){
+  const file=document.getElementById('tariffFile').files[0];
+  const carrier=document.getElementById('tariffCarrier').value;
+  const date=document.getElementById('tariffDate').value||new Date().toISOString().slice(0,10);
+  const month=date.slice(0,7);
+  const box=document.getElementById('tariffParseResult');
+  if(!file){alert(currentLang==='it'?'Seleziona prima un file.':'请先选择 tariffario 文件。');return;}
+  box.style.display='block'; box.textContent=currentLang==='it'?'Analisi del file in corso...':'正在解析文件...';
+  try{
+    const text=await extractTariffText(file);
+    const detected=detectSurcharges(text,carrier,month);
+    let rows=getSurcharges().filter(function(r){return !(r.carrier===carrier && detected.some(function(d){return d.code===r.code && d.month===r.month}))});
+    rows=rows.concat(detected); saveSurcharges(rows); renderSurcharges();
+    const tariffs=JSON.parse(localStorage.getItem('hdTariffs')||'[]');
+    tariffs.push({carrier:carrier,file:file.name,date:date,detected:detected.length});
+    localStorage.setItem('hdTariffs',JSON.stringify(tariffs)); renderCarrierGrid();
+    box.textContent=currentLang==='it'
+      ?('Tariffario '+carrier+' acquisito. Supplementi riconosciuti automaticamente: '+detected.length+'. '+(detected.some(function(x){return x.status==='review'})?'Alcuni valori richiedono verifica.':''))
+      :('已导入 '+carrier+' tariffario。自动识别附加费：'+detected.length+' 项。'+(detected.some(function(x){return x.status==='review'})?'部分数值需要确认。':''));
+  }catch(err){
+    box.textContent=currentLang==='it'?'Non sono riuscito a leggere automaticamente questo file nel demo. Il corriere resta comunque disponibile; nella versione server il parsing PDF sarà gestito dal backend.':'这个测试版暂时无法自动读取该文件。快递公司仍会保留；正式服务器版会由后台解析 PDF。';
+  }
+}
+document.getElementById('addCarrierBtn').onclick=addCarrier;
+document.getElementById('addCarrierFromTariffBtn').onclick=addCarrier;
+document.getElementById('parseTariffBtn').onclick=parseTariff;
+populateCarrierSelects(); renderCarrierGrid(); renderSurcharges();
+
 captureI18n();
 document.getElementById('languageSelect').addEventListener('change',function(e){applyLanguage(e.target.value)});
 applyLanguage(currentLang);
