@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="manifest.webmanifest">
+<title>HD Warehouse</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6d778b;--line:#e5e9f0;--primary:#2457ff;--ok:#12805c;--danger:#d92d20}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;background:var(--bg);color:var(--text)}
+.shell{max-width:720px;margin:0 auto;min-height:100vh;padding:14px}.top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 14px}
+.brand{font-size:20px;font-weight:800}.sub{font-size:12px;color:var(--muted)}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(16,24,40,.04)}
+label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,textarea{width:100%;padding:12px;border:1px solid #d7dce5;border-radius:11px;background:#fff;font:inherit}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:0;border-radius:11px;padding:11px 14px;background:#e9edf5;color:#253047;font-weight:700}.btn.primary{background:var(--primary);color:#fff}.btn.danger{background:#feeceb;color:var(--danger)}.actions{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}
+.login{position:fixed;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}.login .card{width:min(430px,100%);margin:0}.notice{padding:11px;border-radius:10px;background:#eef4ff;color:#2949a5;font-size:13px}
+.pallet{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px}.muted{font-size:12px;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+@media(max-width:520px){.row{grid-template-columns:1fr}.shell{padding:10px}.top{align-items:flex-start}.top .actions{justify-content:flex-end}}
+</style>
+</head>
+<body>
+<div id="login" class="login">
+  <div class="card">
+    <div class="brand">HD Warehouse</div><div class="sub">员工手机端 / App dipendenti</div>
+    <label>公司代码 / Codice azienda</label><input id="company" value="HDGROUP" autocomplete="organization">
+    <label>用户名 / Utente</label><input id="user" autocomplete="username">
+    <label>PIN / Password</label><input id="pass" type="password" autocomplete="current-password">
+    <button id="loginBtn" class="btn primary" style="width:100%;margin-top:14px">登录 / Accedi</button>
+    <div id="loginError" class="muted" style="color:var(--danger);margin-top:9px"></div>
+    <div class="muted" style="margin-top:10px">Demo: Mario / 1111 · Luca / 2222</div>
+  </div>
+</div>
+
+<div class="shell">
+  <div class="top">
+    <div><div class="brand">HD Warehouse</div><div id="who" class="sub">—</div></div>
+    <div class="actions"><select id="lang" style="width:auto"><option value="zh">中文</option><option value="it">Italiano</option></select><button id="logoutBtn" class="btn">退出 / Esci</button></div>
+  </div>
+
+  <div class="card">
+    <div id="welcome" class="notice">—</div>
+    <div class="row">
+      <div><label data-zh="客户编号" data-it="Codice cliente">客户编号</label><input id="customerCode" placeholder="C01238"></div>
+      <div><label data-zh="客户名称 / 店铺" data-it="Cliente / negozio">客户名称 / 店铺</label><input id="customerName"></div>
+      <div><label data-zh="箱数" data-it="Numero colli">箱数</label><input id="boxes" type="number" min="0" value="1"></div>
+      <div><label data-zh="箱型" data-it="Tipo collo">箱型</label><select id="boxType"><option value="标准箱 60×40×40">标准箱 60×40×40</option><option value="小箱 40×30×30">小箱 40×30×30</option><option value="大箱 80×60×60">大箱 80×60×60</option></select></div>
+      <div><label data-zh="快递公司" data-it="Corriere">快递公司</label><select id="carrier"></select></div>
+      <div><label data-zh="总重量 kg（可选）" data-it="Peso totale kg (facoltativo)">总重量 kg（可选）</label><input id="totalWeight" type="number" min="0" step="0.1"></div>
+    </div>
+    <label data-zh="是否打板" data-it="Pallettizzare?">是否打板</label>
+    <select id="palletized"><option value="no">不打板 / No</option><option value="yes">打板 / Sì</option></select>
+    <div id="palletArea" class="hidden">
+      <label data-zh="板数" data-it="Numero pallet">板数</label><select id="palletCount"></select>
+      <div id="palletRows"></div>
+    </div>
+    <label data-zh="备注" data-it="Note">备注</label><textarea id="notes" rows="3"></textarea>
+    <div class="actions" style="margin-top:12px"><button id="saveBtn" class="btn primary">保存记录 / Salva</button><button id="clearBtn" class="btn">清空 / Azzera</button></div>
+  </div>
+
+  <div class="card">
+    <div class="actions" style="justify-content:space-between;align-items:center"><b id="recentTitle">我的最近录入</b><span id="perm" class="muted"></span></div>
+    <div style="overflow:auto;margin-top:8px"><table><thead><tr><th>时间</th><th>客户</th><th>快递</th><th>箱/板</th><th id="actHead">操作</th></tr></thead><tbody id="recentBody"></tbody></table></div>
+  </div>
+  <div class="muted">当前是前端测试版：数据保存在当前设备浏览器。正式多人版需要共享数据库与服务器认证。</div>
+</div>
+
+<script>
+const DEFAULT_EMPLOYEES=[
+ {username:'Alessandro',name:'Alessandro',pin:'1234',role:'admin',warehouse:'Tutti',permissions:['all'],active:true},
+ {username:'Mario',name:'Mario',pin:'1111',role:'entry',warehouse:'Roma Est',permissions:['entry'],active:true},
+ {username:'Luca',name:'Luca',pin:'2222',role:'entry_edit',warehouse:'Roma Est',permissions:['entry','edit_own'],active:true}
+];
+let currentUser=null,currentLang=localStorage.getItem('hdLang')||'zh';
+function getEmployees(){try{const x=JSON.parse(localStorage.getItem('hdEmployees')||'null');return Array.isArray(x)?x:DEFAULT_EMPLOYEES.slice()}catch(e){return DEFAULT_EMPLOYEES.slice()}}
+function getCarriers(){try{const x=JSON.parse(localStorage.getItem('hdCarriers')||'null');return Array.isArray(x)&&x.length?x:['BRT','GLS']}catch(e){return ['BRT','GLS']}}
+function getRecords(){try{return JSON.parse(localStorage.getItem('hdShipmentRecords')||'[]')}catch(e){return []}}
+function t(zh,it){return currentLang==='it'?it:zh}
+function applyLang(){
+ localStorage.setItem('hdLang',currentLang);document.documentElement.lang=currentLang==='it'?'it':'zh-CN';
+ document.querySelectorAll('[data-zh]').forEach(el=>el.textContent=currentLang==='it'?el.dataset.it:el.dataset.zh);
+ document.getElementById('recentTitle').textContent=t('我的最近录入','Le mie registrazioni recenti');
+ document.getElementById('actHead').textContent=t('操作','Azioni');
+ if(currentUser) enter();
+}
+function populate(){
+ const c=document.getElementById('carrier');c.innerHTML='';getCarriers().forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;c.appendChild(o)});
+ const pc=document.getElementById('palletCount');for(let i=1;i<=10;i++){const o=document.createElement('option');o.value=i;o.textContent=i;pc.appendChild(o)}
+}
+function renderPallets(){
+ const yes=document.getElementById('palletized').value==='yes';document.getElementById('palletArea').classList.toggle('hidden',!yes);
+ const wrap=document.getElementById('palletRows');wrap.innerHTML='';if(!yes)return;
+ const n=Number(document.getElementById('palletCount').value||1);
+ for(let i=1;i<=n;i++){const d=document.createElement('div');d.className='pallet';d.innerHTML='<b>'+t('第 '+i+' 板','Pallet '+i)+'</b><div class="row"><div><label>'+t('总高度 cm','Altezza totale cm')+'</label><input class="ph" type="number" min="0"></div><div><label>'+t('重量 kg','Peso kg')+'</label><input class="pw" type="number" min="0" step="0.1"></div></div>';wrap.appendChild(d)}
+}
+function login(){
+ const company=document.getElementById('company').value.trim().toUpperCase(),u=document.getElementById('user').value.trim(),p=document.getElementById('pass').value;
+ const emp=getEmployees().find(e=>e.active&&e.role!=='admin'&&e.username.toLowerCase()===u.toLowerCase()&&e.pin===p);
+ if(company!=='HDGROUP'||!emp){document.getElementById('loginError').textContent=t('员工登录信息不正确。','Credenziali dipendente non valide.');return}
+ currentUser=emp;sessionStorage.setItem('hdEmployeeSession',emp.username);document.getElementById('login').classList.add('hidden');enter();
+}
+function enter(){
+ if(!currentUser)return;
+ document.getElementById('who').textContent=currentUser.name+' · '+currentUser.warehouse;
+ document.getElementById('welcome').textContent=t('当前登录：','Connesso come ')+currentUser.name+' · '+currentUser.warehouse;
+ document.getElementById('perm').textContent=currentUser.role==='entry_edit'?t('可修改自己的记录','Può modificare i propri dati'):t('仅可录入','Solo inserimento');
+ renderRecent();
+}
+function logout(){sessionStorage.removeItem('hdEmployeeSession');currentUser=null;document.getElementById('login').classList.remove('hidden')}
+function detail(){
+ const parts=[document.getElementById('boxType').value];
+ const tw=document.getElementById('totalWeight').value;if(tw)parts.push(t('总重 ','Peso totale ')+tw+'kg');
+ document.querySelectorAll('#palletRows .pallet').forEach((p,i)=>{const h=p.querySelector('.ph').value,w=p.querySelector('.pw').value;parts.push((i+1)+': '+(h||'—')+'cm / '+(w||'—')+'kg')});
+ return parts.join(' | ');
+}
+function save(){
+ if(!currentUser)return;
+ const list=getRecords(),yes=document.getElementById('palletized').value==='yes';
+ const customer=(document.getElementById('customerCode').value+' '+document.getElementById('customerName').value).trim()||'—';
+ list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,carrier:document.getElementById('carrier').value,boxes:Number(document.getElementById('boxes').value||0),pallets:yes?Number(document.getElementById('palletCount').value||1):0,detail:detail(),notes:document.getElementById('notes').value});
+ localStorage.setItem('hdShipmentRecords',JSON.stringify(list));alert(t('录入已保存。','Registrazione salvata.'));clearForm();renderRecent();
+}
+function clearForm(){['customerCode','customerName','totalWeight','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('boxes').value=1;document.getElementById('palletized').value='no';renderPallets()}
+function renderRecent(){
+ const body=document.getElementById('recentBody');body.innerHTML='';const all=getRecords();
+ const mine=all.map((r,i)=>({r:r,index:i})).filter(x=>x.r.username===currentUser.username).slice(-10).reverse();
+ if(!mine.length){body.innerHTML='<tr><td colspan="5" class="muted">'+t('还没有录入。','Nessuna registrazione.')+'</td></tr>';return}
+ mine.forEach(x=>{const r=x.r,tr=document.createElement('tr');const edit=currentUser.role==='entry_edit'?'<button class="btn" data-edit="'+x.index+'">'+t('修改','Modifica')+'</button>':'—';tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.customer+'</td><td>'+r.carrier+'</td><td>'+r.boxes+' / '+r.pallets+'</td><td>'+edit+'</td>';body.appendChild(tr)});
+ body.querySelectorAll('[data-edit]').forEach(btn=>btn.onclick=()=>editOwn(Number(btn.dataset.edit)));
+}
+function editOwn(i){
+ if(!currentUser||currentUser.role!=='entry_edit')return;const list=getRecords(),r=list[i];if(!r||r.username!==currentUser.username)return;
+ const c=prompt(t('客户 / 店铺','Cliente / negozio'),r.customer);if(c===null)return;
+ const b=prompt(t('箱数','Numero colli'),r.boxes);if(b===null)return;
+ const p=prompt(t('板数','Numero pallet'),r.pallets);if(p===null)return;
+ const d=prompt(t('尺寸 / 重量','Dimensioni / peso'),r.detail);if(d===null)return;
+ const n=prompt(t('备注','Note'),r.notes||'');if(n===null)return;
+ r.customer=c||'—';r.boxes=Number(b||0);r.pallets=Number(p||0);r.detail=d||'—';r.notes=n;r.employeeEditedAt=new Date().toISOString();list[i]=r;localStorage.setItem('hdShipmentRecords',JSON.stringify(list));renderRecent();
+}
+populate();document.getElementById('palletized').onchange=renderPallets;document.getElementById('palletCount').onchange=renderPallets;renderPallets();
+document.getElementById('loginBtn').onclick=login;document.getElementById('pass').onkeydown=e=>{if(e.key==='Enter')login()};document.getElementById('logoutBtn').onclick=logout;document.getElementById('saveBtn').onclick=save;document.getElementById('clearBtn').onclick=clearForm;
+document.getElementById('lang').value=currentLang;document.getElementById('lang').onchange=e=>{currentLang=e.target.value;applyLang()};applyLang();
+const saved=sessionStorage.getItem('hdEmployeeSession');if(saved){const e=getEmployees().find(x=>x.active&&x.role!=='admin'&&x.username===saved);if(e){currentUser=e;document.getElementById('login').classList.add('hidden');enter()}}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('service-worker.js').catch(()=>{})}
+</script>
+</body></html>
