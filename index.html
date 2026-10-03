@@ -49,7 +49,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <button data-page="tariffs">Tariffario</button>
 <button data-page="surcharges">附加费</button>
 <button data-page="invoices">PDF 发票</button>
-<button data-page="audit">自动对账</button>
+<button data-page="audit">月度对账</button>
 <button data-page="settings">公司 / 员工</button>
 </div>
 </aside>
@@ -127,8 +127,13 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </section>
 
 <section id="tariffs" class="section">
-<div class="card"><h3>Tariffario 上传</h3><div class="notice">选择任意承运商并上传 PDF / Excel / CSV。测试版会尝试从文件文字中识别 IS、L、FUEL、COD 等附加费，并自动写入“附加费”页面；无法确定的项目会标记为待确认。</div>
-<div class="row3" style="margin-top:14px"><div><label>承运商</label><select id="tariffCarrier" class="carrierSelect"></select></div><div><label>生效日期</label><input id="tariffDate" type="date" value="2026-10-01"></div><div><label>文件</label><input id="tariffFile" type="file" accept=".pdf,.xlsx,.xls,.csv,.txt"></div></div>
+<div class="card"><h3>Tariffario 上传</h3><div class="notice">每份 Tariffario 都保存承运商和有效期。月度对账会按发货日期选择当时有效的价格版本，历史 Tariffario 不会被覆盖。</div>
+<div class="row3" style="margin-top:14px">
+<div><label>承运商</label><select id="tariffCarrier" class="carrierSelect"></select></div>
+<div><label>有效期开始 / Dal</label><input id="tariffDate" type="date" value="2026-10-01"></div>
+<div><label>有效期结束 / Al（可选）</label><input id="tariffEndDate" type="date"></div>
+<div><label>文件</label><input id="tariffFile" type="file" accept=".pdf,.xlsx,.xls,.csv,.txt"></div>
+</div>
 <div class="actions" style="margin-top:14px"><button class="btn primary" id="parseTariffBtn">上传并解析</button><button class="btn" id="addCarrierFromTariffBtn">+ 新增承运商</button></div>
 <div id="tariffParseResult" class="notice" style="display:none;margin-top:12px"></div><div id="tariffHistory" style="margin-top:12px"></div>
 </div></section>
@@ -142,17 +147,57 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </section>
 
 <section id="invoices" class="section">
-<div class="card"><h3>PDF 发票上传</h3><div class="notice">正式版会自动提取运单号、计费重量、基础运费、燃油费、COD、IS/L 等附加费和最终金额，再与理论价格逐票匹配。</div>
-<div class="row" style="margin-top:14px"><div><label>承运商</label><select id="invoiceCarrier" class="carrierSelect"></select></div><div><label>PDF 发票</label><input id="invoiceFile" type="file" accept=".pdf"></div></div><div class="actions" style="margin-top:14px"><button class="btn primary" id="parseInvoiceBtn">上传并解析 PDF</button></div><div id="invoiceParseResult" class="notice" style="display:none;margin-top:12px"></div></div>
+<div class="card"><h3>PDF 发票上传</h3><div class="notice">发票按“承运商 + 对账月份”保存。每个月上传该快递公司的月度发票后，会自动归入对应月度对账批次。</div>
+<div class="row3" style="margin-top:14px">
+<div><label>承运商</label><select id="invoiceCarrier" class="carrierSelect"></select></div>
+<div><label>对账月份 / Mese</label><input id="invoiceMonth" type="month" value="2026-10"></div>
+<div><label>PDF 发票</label><input id="invoiceFile" type="file" accept=".pdf"></div>
+</div>
+<div class="actions" style="margin-top:14px"><button class="btn primary" id="parseInvoiceBtn">上传并解析 PDF</button></div>
+<div id="invoiceParseResult" class="notice" style="display:none;margin-top:12px"></div>
+<div id="invoiceBatchHistory" style="margin-top:12px"></div>
+</div>
 </section>
 
 <section id="audit" class="section">
-<div class="card"><h3>自动对账</h3>
-<table><thead><tr><th>运单</th><th>理论金额</th><th>发票金额</th><th>差额</th><th>状态</th><th>识别原因</th></tr></thead><tbody>
-<tr><td>BRT-24091823</td><td>€24.30</td><td>€31.80</td><td>+€7.50</td><td><span class="tag bad">异常</span></td><td>发票计费重量高于仓库重量</td></tr>
-<tr><td>BRT-24091877</td><td>€18.90</td><td>€21.40</td><td>+€2.50</td><td><span class="tag warn">复核</span></td><td>IS 代码</td></tr>
-<tr><td>GLS-880142</td><td>€15.20</td><td>€15.20</td><td>€0.00</td><td><span class="tag ok">一致</span></td><td>—</td></tr>
-</tbody></table></div></section>
+<div class="card">
+  <div class="actions" style="justify-content:space-between;align-items:end">
+    <div><h3 style="margin:0">月度对账</h3><p class="muted" style="margin:6px 0 0">按月份和快递公司查看当月仓库记录、发票批次、适用 Tariffario 和异常处理状态。</p></div>
+    <div class="actions">
+      <div><label>月份 / Mese</label><input id="auditMonth" type="month" value="2026-10"></div>
+      <div><label>承运商 / Corriere</label><select id="auditCarrier" class="carrierSelect"></select></div>
+      <button class="btn primary" id="refreshAuditBtn">刷新 / Aggiorna</button>
+    </div>
+  </div>
+</div>
+
+<div class="grid" style="margin-top:14px">
+  <div class="card metric"><span class="muted">仓库记录 / Registrazioni</span><b id="auditWarehouseCount">0</b><span class="muted">当月该快递记录</span></div>
+  <div class="card metric"><span class="muted">发票批次 / Fatture</span><b id="auditInvoiceCount">0</b><span class="muted">已上传月度发票</span></div>
+  <div class="card metric"><span class="muted">Tariffario</span><b id="auditTariffStatus">—</b><span class="muted" id="auditTariffDetail">按有效期匹配</span></div>
+  <div class="card metric"><span class="muted">未解决异常 / Anomalie aperte</span><b id="auditOpenIssues">0</b><span class="muted">只看需要处理的项目</span></div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <div class="actions" style="justify-content:space-between;align-items:center">
+    <div><h3 style="margin:0">月度结算 / Chiusura mensile</h3><p class="muted" id="auditBatchTitle" style="margin:6px 0 0">—</p></div>
+  </div>
+  <div class="grid" style="margin-top:12px">
+    <div class="metric"><span class="muted">理论运费</span><b id="auditTheoryTotal">—</b><span class="muted">逐票计价完成后计算</span></div>
+    <div class="metric"><span class="muted">发票金额</span><b id="auditInvoiceTotal">—</b><span class="muted">发票明细解析后计算</span></div>
+    <div class="metric"><span class="muted">差额</span><b id="auditDifference">—</b><span class="muted">理论 vs 发票</span></div>
+    <div class="metric"><span class="muted">逐票匹配</span><b id="auditMatched">—</b><span class="muted">明细解析完成后显示</span></div>
+  </div>
+  <div class="notice" style="margin-top:12px">当前 GitHub 前端版先把月度批次和数据关系整理正确；在发票逐票明细尚未完整解析前，金额不会用假数字代替。</div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <div class="actions" style="justify-content:space-between;align-items:center"><h3 style="margin:0">异常清单 / Anomalie</h3><button class="btn" id="addAuditIssueBtn">+ 添加异常</button></div>
+  <div style="overflow:auto;margin-top:10px">
+    <table><thead><tr><th>运单</th><th>类型</th><th>说明</th><th>差额</th><th>处理状态</th><th>更新时间</th></tr></thead><tbody id="auditIssueBody"></tbody></table>
+  </div>
+</div>
+</section>
 
 <section id="settings" class="section">
 <div class="card"><h3>公司设置</h3><div class="row3"><div><label>公司名称</label><input value="HD GROUP SRL"></div><div><label>仓库数量</label><input type="number" value="10"></div><div><label>默认语言</label><select><option>中文</option><option>Italiano</option></select></div></div></div>
@@ -181,6 +226,7 @@ it:{
 "附加费":"Supplementi",
 "PDF 发票":"Fatture PDF",
 "自动对账":"Riconciliazione",
+"月度对账":"Riconciliazione mensile",
 "公司 / 员工":"Azienda / dipendenti",
 "Demo · 数据仅保存在当前浏览器":"Demo · dati salvati solo in questo browser",
 "本月发货":"Spedizioni del mese",
@@ -502,7 +548,7 @@ function renderTariffHistory(){
     const items=list.filter(function(x){return x.carrier===c});
     box.innerHTML='<div class="groupHead"><span>'+c+'</span><span class="muted">'+items.length+' Tariffario</span></div><div class="groupBody"></div>';
     const body=box.querySelector('.groupBody');
-    items.forEach(function(x){body.insertAdjacentHTML('beforeend','<div style="padding:9px 0;border-bottom:1px solid var(--line)"><b>'+x.file+'</b><div class="muted">'+x.date+' · '+x.detected+' '+(currentLang==='it'?'supplementi rilevati':'项附加费')+'</div></div>')});
+    items.forEach(function(x){const range=(x.validFrom||x.date||'—')+' → '+(x.validTo||'∞');body.insertAdjacentHTML('beforeend','<div style="padding:9px 0;border-bottom:1px solid var(--line)"><b>'+x.file+'</b><div class="muted">'+range+' · '+x.detected+' '+(currentLang==='it'?'supplementi rilevati':'项附加费')+'</div></div>')});
     wrap.appendChild(box);
   });
 }
@@ -562,6 +608,7 @@ async function parseTariff(){
   const file=document.getElementById('tariffFile').files[0];
   const carrier=document.getElementById('tariffCarrier').value;
   const date=document.getElementById('tariffDate').value||new Date().toISOString().slice(0,10);
+  const endDate=document.getElementById('tariffEndDate')?document.getElementById('tariffEndDate').value:'';
   const month=date.slice(0,7);
   const box=document.getElementById('tariffParseResult');
   if(!file){alert(currentLang==='it'?'Seleziona prima un file.':'请先选择 tariffario 文件。');return;}
@@ -579,7 +626,7 @@ async function parseTariff(){
     let rows=getSurcharges().filter(function(r){return !(r.carrier===carrier && detected.some(function(d){return d.code===r.code && d.month===r.month}))});
     rows=rows.concat(detected); saveSurcharges(rows);
     const tariffs=getTariffs();
-    tariffs.push({carrier:carrier,file:file.name,date:date,detected:detected.length,validated:detectedCarrier||'manual'});
+    tariffs.push({carrier:carrier,file:file.name,date:date,validFrom:date,validTo:endDate||'',detected:detected.length,validated:detectedCarrier||'manual'});
     localStorage.setItem('hdTariffs',JSON.stringify(tariffs));
     renderCarrierGrid();renderSurcharges();renderTariffHistory();
     box.textContent=currentLang==='it'
@@ -589,9 +636,70 @@ async function parseTariff(){
     box.textContent=currentLang==='it'?'Non sono riuscito a leggere automaticamente questo file nel demo. Nessun dato è stato assegnato a un altro corriere.':'这个测试版暂时无法自动读取该文件，并且不会把数据自动归到其他快递公司。';
   }
 }
+function getInvoices(){try{return JSON.parse(localStorage.getItem('hdInvoices')||'[]')}catch(e){return []}}
+function renderInvoiceBatchHistory(){
+ const wrap=document.getElementById('invoiceBatchHistory');if(!wrap)return;
+ const rows=getInvoices().slice().reverse();wrap.innerHTML='';
+ if(!rows.length){wrap.innerHTML='<div class="muted">'+(currentLang==='it'?'Nessuna fattura mensile caricata.':'还没有上传月度发票。')+'</div>';return}
+ rows.forEach(function(x){
+   const d=document.createElement('div');d.className='groupCard';
+   d.innerHTML='<div class="groupHead"><span>'+x.carrier+' · '+(x.month||String(x.date||'').slice(0,7)||'—')+'</span><span class="muted">'+x.file+'</span></div>';
+   wrap.appendChild(d);
+ });
+}
+function getAuditIssues(){try{return JSON.parse(localStorage.getItem('hdAuditIssues')||'[]')}catch(e){return []}}
+function saveAuditIssues(rows){localStorage.setItem('hdAuditIssues',JSON.stringify(rows))}
+function issueStatusLabel(s){
+ if(currentLang==='it') return s==='carrier_error'?'Errore corriere':s==='contacted'?'Corriere contattato':s==='credited'?'Nota di credito / rimborsato':s==='ok'?'Corretto':'Da verificare';
+ return s==='carrier_error'?'快递收费错误':s==='contacted'?'已联系快递':s==='credited'?'已退款 / Nota di credito':s==='ok'?'正确':'待确认';
+}
+function renderAuditIssues(){
+ const body=document.getElementById('auditIssueBody');if(!body)return;
+ const month=document.getElementById('auditMonth').value,carrier=document.getElementById('auditCarrier').value;
+ const all=getAuditIssues();const rows=all.map(function(r,i){return {r:r,index:i}}).filter(function(x){return x.r.month===month&&x.r.carrier===carrier});
+ body.innerHTML='';
+ if(!rows.length){body.innerHTML='<tr><td colspan="6" class="muted">'+(currentLang==='it'?'Nessuna anomalia registrata per questo mese.':'这个月份暂时没有异常记录。')+'</td></tr>';return}
+ rows.forEach(function(x){
+   const r=x.r,tr=document.createElement('tr');
+   tr.innerHTML='<td>'+(r.shipment||'—')+'</td><td>'+r.type+'</td><td>'+(r.note||'—')+'</td><td>'+(r.difference||'—')+'</td><td><select data-issue-status="'+x.index+'"><option value="review">待确认 / Da verificare</option><option value="ok">正确 / Corretto</option><option value="carrier_error">快递收费错误 / Errore corriere</option><option value="contacted">已联系快递 / Contattato</option><option value="credited">已退款 / Nota di credito</option></select></td><td>'+(r.updatedAt?new Date(r.updatedAt).toLocaleString():'—')+'</td>';
+   body.appendChild(tr);tr.querySelector('select').value=r.status||'review';
+ });
+ body.querySelectorAll('[data-issue-status]').forEach(function(sel){
+   sel.onchange=function(){const rows=getAuditIssues(),i=Number(sel.getAttribute('data-issue-status'));if(!rows[i])return;rows[i].status=sel.value;rows[i].updatedAt=new Date().toISOString();saveAuditIssues(rows);renderMonthlyAudit()};
+ });
+}
+function addAuditIssue(){
+ const month=document.getElementById('auditMonth').value,carrier=document.getElementById('auditCarrier').value;
+ const shipment=prompt(currentLang==='it'?'Numero spedizione':'运单号')||'';
+ const type=prompt(currentLang==='it'?'Tipo anomalia (peso, colli, tariffa, supplemento...)':'异常类型（重量、箱数、基础运费、附加费等）')||'待确认';
+ const note=prompt(currentLang==='it'?'Descrizione':'说明')||'';
+ const difference=prompt(currentLang==='it'?'Differenza, es. +€7.50':'差额，例如 +€7.50')||'';
+ const rows=getAuditIssues();rows.push({month:month,carrier:carrier,shipment:shipment,type:type,note:note,difference:difference,status:'review',updatedAt:new Date().toISOString()});saveAuditIssues(rows);renderMonthlyAudit();
+}
+function findTariffForMonth(carrier,month){
+ const target=month+'-15';
+ return getTariffs().filter(function(t){if(t.carrier!==carrier)return false;const from=t.validFrom||t.date||'0000-01-01',to=t.validTo||'9999-12-31';return from<=target&&target<=to}).sort(function(a,b){return String(b.validFrom||b.date||'').localeCompare(String(a.validFrom||a.date||''))})[0]||null;
+}
+function renderMonthlyAudit(){
+ const month=document.getElementById('auditMonth')?document.getElementById('auditMonth').value:'';const carrier=document.getElementById('auditCarrier')?document.getElementById('auditCarrier').value:'';
+ if(!month||!carrier)return;
+ const shipments=getShipmentRecords().filter(function(r){return String(r.time||'').slice(0,7)===month&&r.carrier===carrier});
+ const invoices=getInvoices().filter(function(i){return (i.month||String(i.date||'').slice(0,7))===month&&i.carrier===carrier});
+ const tariff=findTariffForMonth(carrier,month);
+ const issues=getAuditIssues().filter(function(i){return i.month===month&&i.carrier===carrier});
+ const open=issues.filter(function(i){return !['ok','credited'].includes(i.status)}).length;
+ document.getElementById('auditWarehouseCount').textContent=shipments.length;
+ document.getElementById('auditInvoiceCount').textContent=invoices.length;
+ document.getElementById('auditTariffStatus').textContent=tariff?(currentLang==='it'?'Trovato':'已匹配'):(currentLang==='it'?'Manca':'缺少');
+ document.getElementById('auditTariffDetail').textContent=tariff?((tariff.validFrom||tariff.date||'—')+' → '+(tariff.validTo||'∞')):(currentLang==='it'?'Nessun tariffario valido nel mese':'该月没有有效 Tariffario');
+ document.getElementById('auditOpenIssues').textContent=open;
+ document.getElementById('auditBatchTitle').textContent=carrier+' · '+month;
+ renderAuditIssues();
+}
 async function parseInvoice(){
   const file=document.getElementById('invoiceFile').files[0];
   const carrier=document.getElementById('invoiceCarrier').value;
+  const invoiceMonth=document.getElementById('invoiceMonth')?document.getElementById('invoiceMonth').value:new Date().toISOString().slice(0,7);
   const box=document.getElementById('invoiceParseResult');
   if(!file){alert(currentLang==='it'?'Seleziona prima una fattura PDF.':'请先选择 PDF 发票。');return;}
   box.style.display='block';box.textContent=currentLang==='it'?'Controllo corriere del documento...':'正在核对发票所属快递公司...';
@@ -604,9 +712,11 @@ async function parseInvoice(){
         :('已拦截：你选择的是 '+carrier+'，但这张发票看起来属于 '+detectedCarrier+'。系统没有导入。');
       return;
     }
-    const invoices=JSON.parse(localStorage.getItem('hdInvoices')||'[]');
-    invoices.push({carrier:carrier,file:file.name,validated:detectedCarrier||'manual',date:new Date().toISOString()});
+    const invoices=getInvoices();
+    invoices.push({carrier:carrier,month:invoiceMonth,file:file.name,validated:detectedCarrier||'manual',date:new Date().toISOString()});
     localStorage.setItem('hdInvoices',JSON.stringify(invoices));
+    renderInvoiceBatchHistory();
+    if(document.getElementById('auditMonth')){document.getElementById('auditMonth').value=invoiceMonth;document.getElementById('auditCarrier').value=carrier;renderMonthlyAudit();}
     box.textContent=currentLang==='it'
       ?('Fattura acquisita e vincolata a '+carrier+'. Il corriere non verrà cambiato automaticamente.')
       :('发票已导入并固定绑定到 '+carrier+'，系统不会自动改成其他快递公司。');
@@ -619,7 +729,11 @@ document.getElementById('addCarrierBtn').onclick=addCarrier;
 document.getElementById('addCarrierFromTariffBtn').onclick=addCarrier;
 document.getElementById('parseTariffBtn').onclick=parseTariff;
 document.getElementById('parseInvoiceBtn').onclick=parseInvoice;
-populateCarrierSelects(); renderCarrierGrid(); renderSurcharges(); renderTariffHistory();
+document.getElementById('refreshAuditBtn').onclick=renderMonthlyAudit;
+document.getElementById('auditMonth').onchange=renderMonthlyAudit;
+document.getElementById('auditCarrier').onchange=renderMonthlyAudit;
+document.getElementById('addAuditIssueBtn').onclick=addAuditIssue;
+populateCarrierSelects(); renderCarrierGrid(); renderSurcharges(); renderTariffHistory(); renderInvoiceBatchHistory(); renderMonthlyAudit();
 
 
 const DEFAULT_EMPLOYEES=[
