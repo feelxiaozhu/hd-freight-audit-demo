@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>HD Freight Audit</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6d778b;--line:#e5e9f0;--primary:#2457ff;--danger:#d92d20;--ok:#12805c;--warn:#b54708}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;background:var(--bg);color:var(--text)}
+.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}.side{background:#111827;color:#fff;padding:22px 14px;position:sticky;top:0;height:100vh}
+.brand{font-weight:800;font-size:20px;padding:4px 10px 20px}.brand small{display:block;font-weight:500;color:#9ca3af;font-size:11px;margin-top:4px}
+.nav button{width:100%;border:0;background:transparent;color:#cbd5e1;text-align:left;padding:11px 12px;border-radius:10px;margin:2px 0;font-size:14px}.nav button.active,.nav button:hover{background:#243047;color:#fff}
+.main{padding:24px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:20px}.top h1{font-size:24px;margin:0}.pill{background:#eef2ff;color:#3347a8;padding:8px 12px;border-radius:999px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 2px 9px rgba(16,24,40,.04)}.metric b{font-size:26px;display:block;margin-top:8px}.muted{color:var(--muted);font-size:12px}
+.section{display:none}.section.active{display:block}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+label{font-size:12px;color:#4b5563;display:block;margin-bottom:5px}input,select,textarea{width:100%;padding:11px 12px;border:1px solid #d7dce5;border-radius:10px;background:#fff;font:inherit}input[type=file]{padding:9px}
+.btn{border:0;border-radius:10px;padding:10px 14px;background:#e9edf5;color:#253047;font-weight:650}.btn.primary{background:var(--primary);color:#fff}.btn.danger{background:#feeceb;color:var(--danger)}.actions{display:flex;gap:8px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid var(--line)}th{color:#697386;font-weight:600}.tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px}.tag.ok{background:#e8f7f1;color:var(--ok)}.tag.bad{background:#fff0ee;color:var(--danger)}.tag.warn{background:#fff6e8;color:var(--warn)}
+.pallets{margin-top:12px}.pallet{padding:12px;border:1px solid var(--line);border-radius:10px;margin-top:8px;background:#fafbfc}.switches{display:flex;gap:12px;align-items:center}.switches label{font-size:14px;margin:0}.switches input{width:auto}
+.notice{padding:12px;border-radius:10px;background:#eef4ff;color:#2949a5;font-size:13px}
+.footerNote{font-size:11px;color:#8a94a6;margin-top:12px}
+@media(max-width:900px){.app{display:block}.side{position:static;height:auto;padding:10px}.brand{padding:4px 8px 10px}.nav{display:flex;overflow:auto;gap:6px}.nav button{white-space:nowrap;width:auto}.main{padding:14px}.grid{grid-template-columns:repeat(2,1fr)}.row,.row3{grid-template-columns:1fr}.top{align-items:flex-start}.pill{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+<div class="brand">HD Freight Audit<small>Wholesale Logistics SaaS Prototype</small></div>
+<div class="nav" id="nav">
+<button class="active" data-page="dashboard">Dashboard</button>
+<button data-page="warehouse">仓库录入</button>
+<button data-page="packages">箱型 / 托盘</button>
+<button data-page="carriers">快递公司</button>
+<button data-page="tariffs">Tariffario</button>
+<button data-page="surcharges">附加费</button>
+<button data-page="invoices">PDF 发票</button>
+<button data-page="audit">自动对账</button>
+<button data-page="settings">公司 / 员工</button>
+</div>
+</aside>
+<main class="main">
+<div class="top"><h1 id="title">Dashboard</h1><div class="pill">Demo · 数据仅保存在当前浏览器</div></div>
+
+<section id="dashboard" class="section active">
+<div class="grid">
+<div class="card metric"><span class="muted">本月发货</span><b id="mShip">128</b><span class="muted">票</span></div>
+<div class="card metric"><span class="muted">理论运费</span><b>€ 6,842</b><span class="muted">按合同价</span></div>
+<div class="card metric"><span class="muted">发票实收</span><b>€ 7,196</b><span class="muted">BRT / GLS</span></div>
+<div class="card metric"><span class="muted">异常差额</span><b style="color:#d92d20">€ 354</b><span class="muted">17 票需复核</span></div>
+</div>
+<div class="card" style="margin-top:14px">
+<h3>异常概览</h3>
+<table><thead><tr><th>运单</th><th>承运商</th><th>理论</th><th>实收</th><th>差额</th><th>原因</th></tr></thead>
+<tbody><tr><td>BRT-24091823</td><td>BRT</td><td>€24.30</td><td>€31.80</td><td style="color:#d92d20">+€7.50</td><td><span class="tag bad">重量异常</span></td></tr>
+<tr><td>BRT-24091877</td><td>BRT</td><td>€18.90</td><td>€21.40</td><td style="color:#d92d20">+€2.50</td><td><span class="tag warn">IS 附加费</span></td></tr>
+<tr><td>GLS-880142</td><td>GLS</td><td>€15.20</td><td>€15.20</td><td>€0.00</td><td><span class="tag ok">一致</span></td></tr></tbody></table>
+</div>
+</section>
+
+<section id="warehouse" class="section">
+<div class="card">
+<h3>仓库发货登记</h3>
+<div class="row3">
+<div><label>仓库 / 员工</label><select><option>Roma Est · Mario</option><option>Roma Est · Luca</option></select></div>
+<div><label>客户编号</label><input placeholder="例如 C01238"/></div>
+<div><label>客户名称</label><input placeholder="客户名称"/></div>
+<div><label>箱数</label><input type="number" min="0" value="1"/></div>
+<div><label>箱型</label><select><option>标准箱 60×40×40</option><option>小箱 40×30×30</option><option>大箱 80×60×60</option></select></div>
+<div><label>承运商</label><select><option>BRT</option><option>GLS</option><option>FedEx</option><option>DHL</option></select></div>
+</div>
+<div style="margin-top:14px"><label>是否打板</label><div class="switches"><label><input type="radio" name="pal" value="no" checked> 不打板</label><label><input type="radio" name="pal" value="yes"> 打板</label></div></div>
+<div id="palletBlock" style="display:none;margin-top:12px">
+<div class="row"><div><label>板数</label><select id="palletCount"><option value="1">1 板</option><option value="2">2 板</option><option value="3">3 板</option><option value="4">4 板</option><option value="5">5 板</option><option value="6">6 板</option><option value="7">7 板</option><option value="8">8 板</option><option value="9">9 板</option><option value="10">10 板</option></select></div><div><label>托盘规格</label><input value="EPAL 120 × 80 cm" readonly></div></div>
+<div id="palletRows" class="pallets"></div>
+</div>
+<div class="row" style="margin-top:12px"><div><label>照片</label><input type="file" accept="image/*" capture="environment"></div><div><label>备注</label><input placeholder="破损、特殊包装等"></div></div>
+<div class="actions" style="margin-top:14px"><button class="btn primary" id="saveShipment">保存记录</button><button class="btn">清空</button></div>
+<div class="footerNote">EPAL 底板高度按 15 cm；货物高度 = 实际总高度 − 15 cm。</div>
+</div>
+</section>
+
+<section id="packages" class="section">
+<div class="card"><div class="actions" style="justify-content:space-between"><h3 style="margin:0">箱型 / 托盘设置</h3><button class="btn primary" onclick="addPackage()">+ 新增箱型</button></div>
+<table id="packageTable"><thead><tr><th>名称</th><th>长</th><th>宽</th><th>高</th><th>默认重量</th></tr></thead><tbody>
+<tr><td>小箱</td><td>40 cm</td><td>30 cm</td><td>30 cm</td><td>—</td></tr>
+<tr><td>标准箱</td><td>60 cm</td><td>40 cm</td><td>40 cm</td><td>—</td></tr>
+<tr><td>EPAL 托盘</td><td>120 cm</td><td>80 cm</td><td>15 cm 底板</td><td>—</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="carriers" class="section">
+<div class="grid">
+<div class="card"><h3>BRT</h3><p class="muted">已启用 · 计价规则可配置</p><button class="btn">编辑</button></div>
+<div class="card"><h3>GLS</h3><p class="muted">已启用</p><button class="btn">编辑</button></div>
+<div class="card"><h3>FedEx</h3><p class="muted">未配置 tariffario</p><button class="btn">编辑</button></div>
+<div class="card"><h3>DHL</h3><p class="muted">未启用</p><button class="btn">编辑</button></div>
+</div></section>
+
+<section id="tariffs" class="section">
+<div class="card"><h3>Tariffario 上传</h3><div class="notice">每家批发商上传自己的合同价。正式版会识别重量段、区域、省份、箱/板计价和生效日期，并保留历史版本。</div>
+<div class="row3" style="margin-top:14px"><div><label>承运商</label><select><option>BRT</option><option>GLS</option></select></div><div><label>生效日期</label><input type="date" value="2026-10-01"></div><div><label>文件</label><input type="file" accept=".pdf,.xlsx,.xls,.csv"></div></div>
+<div class="actions" style="margin-top:14px"><button class="btn primary">上传并解析</button></div>
+</div></section>
+
+<section id="surcharges" class="section">
+<div class="card"><div class="actions" style="justify-content:space-between"><h3 style="margin:0">附加费规则</h3><button class="btn primary" onclick="addSurcharge()">+ 新增代码</button></div>
+<table id="surchargeTable"><thead><tr><th>代码</th><th>名称</th><th>计算方式</th><th>数值</th><th>生效月</th></tr></thead><tbody>
+<tr><td>IS</td><td>超尺寸 / 特殊处理</td><td>固定金额</td><td>€ 2.50</td><td>2026-10</td></tr>
+<tr><td>L</td><td>指定附加费</td><td>固定金额</td><td>€ 4.00</td><td>2026-10</td></tr>
+<tr><td>FUEL</td><td>燃油附加费</td><td>百分比</td><td>12.5%</td><td>2026-10</td></tr>
+</tbody></table></div></section>
+
+<section id="invoices" class="section">
+<div class="card"><h3>PDF 发票上传</h3><div class="notice">正式版会自动提取运单号、计费重量、基础运费、燃油费、COD、IS/L 等附加费和最终金额，再与理论价格逐票匹配。</div>
+<div class="row" style="margin-top:14px"><div><label>承运商</label><select><option>BRT</option><option>GLS</option></select></div><div><label>PDF 发票</label><input type="file" accept=".pdf" multiple></div></div>
+<div class="actions" style="margin-top:14px"><button class="btn primary">上传并解析 PDF</button></div></div>
+</section>
+
+<section id="audit" class="section">
+<div class="card"><h3>自动对账</h3>
+<table><thead><tr><th>运单</th><th>理论金额</th><th>发票金额</th><th>差额</th><th>状态</th><th>识别原因</th></tr></thead><tbody>
+<tr><td>BRT-24091823</td><td>€24.30</td><td>€31.80</td><td>+€7.50</td><td><span class="tag bad">异常</span></td><td>发票计费重量高于仓库重量</td></tr>
+<tr><td>BRT-24091877</td><td>€18.90</td><td>€21.40</td><td>+€2.50</td><td><span class="tag warn">复核</span></td><td>IS 代码</td></tr>
+<tr><td>GLS-880142</td><td>€15.20</td><td>€15.20</td><td>€0.00</td><td><span class="tag ok">一致</span></td><td>—</td></tr>
+</tbody></table></div></section>
+
+<section id="settings" class="section">
+<div class="card"><h3>公司设置</h3><div class="row3"><div><label>公司名称</label><input value="HD GROUP SRL"></div><div><label>仓库数量</label><input type="number" value="10"></div><div><label>默认语言</label><select><option>中文</option><option>Italiano</option></select></div></div></div>
+<div class="card" style="margin-top:14px"><h3>员工与权限</h3><table><thead><tr><th>姓名</th><th>角色</th><th>仓库</th><th>权限</th></tr></thead><tbody><tr><td>Mario</td><td>仓库员工</td><td>Roma Est</td><td>仅录入</td></tr><tr><td>Alessandro</td><td>管理员</td><td>全部</td><td>全部</td></tr></tbody></table></div>
+</section>
+</main>
+</div>
+<script>
+const titles={dashboard:"Dashboard",warehouse:"仓库录入",packages:"箱型 / 托盘",carriers:"快递公司",tariffs:"Tariffario",surcharges:"附加费",invoices:"PDF 发票",audit:"自动对账",settings:"公司 / 员工"};
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(b.dataset.page).classList.add('active');document.getElementById('title').textContent=titles[b.dataset.page]});
+const palRadios=[...document.querySelectorAll('input[name=pal]')], block=document.getElementById('palletBlock'), count=document.getElementById('palletCount'), rows=document.getElementById('palletRows');
+function renderPallets(){const n=+count.value;rows.innerHTML='';for(let i=1;i<=n;i++){const d=document.createElement('div');d.className='pallet';d.innerHTML='<b>第 '+i+' 板</b><div class="row3" style="margin-top:8px"><div><label>实际总高度 (cm)</label><input type="number" class="ph" data-i="'+i+'" placeholder="例如 145"></div><div><label>重量 (kg)</label><input type="number" step="0.1" placeholder="例如 318"></div><div><label>货物高度</label><input class="cargo" data-i="'+i+'" readonly placeholder="自动计算"></div></div>';rows.appendChild(d)}document.querySelectorAll('.ph').forEach(x=>x.oninput=()=>{const c=document.querySelector('.cargo[data-i="'+x.dataset.i+'"]');c.value=x.value?Math.max(0,+x.value-15)+' cm':''})}
+palRadios.forEach(r=>r.onchange=()=>{block.style.display=document.querySelector('input[name=pal]:checked').value==='yes'?'block':'none';if(block.style.display==='block')renderPallets()});count.onchange=renderPallets;
+document.getElementById('saveShipment').onclick=()=>{const n=+(localStorage.getItem('demoShipCount')||128)+1;localStorage.setItem('demoShipCount',n);document.getElementById('mShip').textContent=n;alert('测试记录已保存到当前浏览器。正式版会写入共享数据库。')};document.getElementById('mShip').textContent=localStorage.getItem('demoShipCount')||128;
+function addPackage(){const name=prompt('箱型名称，例如：大箱');if(!name)return;document.querySelector('#packageTable tbody').insertAdjacentHTML('beforeend','<tr><td>'+name+'</td><td>80 cm</td><td>60 cm</td><td>60 cm</td><td>—</td></tr>')}
+function addSurcharge(){const code=prompt('附加费代码，例如：COD');if(!code)return;document.querySelector('#surchargeTable tbody').insertAdjacentHTML('beforeend','<tr><td>'+code+'</td><td>自定义附加费</td><td>固定金额</td><td>€ 0.00</td><td>2026-10</td></tr>')}
+</script>
+</body></html>
