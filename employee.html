@@ -14,9 +14,10 @@
 label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,textarea{width:100%;padding:12px;border:1px solid #d7dce5;border-radius:11px;background:#fff;font:inherit}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn{border:0;border-radius:11px;padding:11px 14px;background:#e9edf5;color:#253047;font-weight:700}.btn.primary{background:var(--primary);color:#fff}.btn.danger{background:#feeceb;color:var(--danger)}.actions{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}
 .login{position:fixed;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}.login .card{width:min(430px,100%);margin:0}.notice{padding:11px;border-radius:10px;background:#eef4ff;color:#2949a5;font-size:13px}
-.pallet{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px}.muted{font-size:12px;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.pallet{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px}.scanBox{margin:12px 0;padding:12px;border:1px dashed #b9c3d5;border-radius:12px;background:#fafcff}.photoPreview{display:block;max-width:100%;max-height:240px;border-radius:10px;margin-top:10px}.full{grid-column:1/-1}.muted{font-size:12px;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 @media(max-width:520px){.row{grid-template-columns:1fr}.shell{padding:10px}.top{align-items:flex-start}.top .actions{justify-content:flex-end}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 <div id="login" class="login">
@@ -39,9 +40,18 @@ label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,
 
   <div class="card">
     <div id="welcome" class="notice">—</div>
+    <div class="scanBox">
+      <b data-zh="拍照识别客户" data-it="Foto e riconoscimento cliente">拍照识别客户</b>
+      <div class="muted" style="margin-top:4px" data-zh="拍客户资料、标签或单据，识别客户编号、名称和地址；识别后请员工确认。" data-it="Scatta una foto a etichetta/documento cliente: il sistema prova a leggere codice, nome e indirizzo. Verificare sempre prima di salvare.">拍客户资料、标签或单据，识别客户编号、名称和地址；识别后请员工确认。</div>
+      <input id="customerPhoto" type="file" accept="image/*" capture="environment" style="margin-top:10px">
+      <img id="customerPhotoPreview" class="photoPreview hidden" alt="customer photo preview">
+      <div class="actions" style="margin-top:10px"><button id="recognizeCustomerBtn" class="btn primary" type="button">识别客户 / Riconosci cliente</button></div>
+      <div id="ocrStatus" class="muted" style="margin-top:8px"></div>
+    </div>
     <div class="row">
       <div><label data-zh="客户编号" data-it="Codice cliente">客户编号</label><input id="customerCode" placeholder="C01238"></div>
       <div><label data-zh="客户名称 / 店铺" data-it="Cliente / negozio">客户名称 / 店铺</label><input id="customerName"></div>
+      <div class="full"><label data-zh="客户地址" data-it="Indirizzo cliente">客户地址</label><input id="customerAddress" placeholder="Via / Piazza / Viale ..."></div>
       <div><label data-zh="箱数" data-it="Numero colli">箱数</label><input id="boxes" type="number" min="0" value="1"></div>
       <div><label data-zh="箱型" data-it="Tipo collo">箱型</label><select id="boxType"><option value="标准箱 60×40×40">标准箱 60×40×40</option><option value="小箱 40×30×30">小箱 40×30×30</option><option value="大箱 80×60×60">大箱 80×60×60</option></select></div>
       <div><label data-zh="快递公司" data-it="Corriere">快递公司</label><select id="carrier"></select></div>
@@ -92,6 +102,55 @@ function renderPallets(){
  const n=Number(document.getElementById('palletCount').value||1);
  for(let i=1;i<=n;i++){const d=document.createElement('div');d.className='pallet';d.innerHTML='<b>'+t('第 '+i+' 板','Pallet '+i)+'</b><div class="row"><div><label>'+t('总高度 cm','Altezza totale cm')+'</label><input class="ph" type="number" min="0"></div><div><label>'+t('重量 kg','Peso kg')+'</label><input class="pw" type="number" min="0" step="0.1"></div></div>';wrap.appendChild(d)}
 }
+function parseCustomerText(text){
+ const raw=String(text||'').replace(/\r/g,'');
+ const lines=raw.split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
+ const joined=lines.join('\n');
+ const codeMatch=joined.match(/(?:cod(?:ice)?\s*(?:cliente|cl\.?|anagrafica)?|cliente\s*(?:n[°ºo.]*)?|customer\s*(?:code|no\.?|id)|客户编号)\s*[:#\-]?\s*([A-Z0-9][A-Z0-9._\/-]{2,})/i);
+ let code=codeMatch?codeMatch[1].trim():'';
+ let address='';
+ const addressLabel=joined.match(/(?:indirizzo|address|地址)\s*[:\-]?\s*([^\n]+)/i);
+ if(addressLabel) address=addressLabel[1].trim();
+ if(!address){
+   const addrLine=lines.find(x=>/\b(via|viale|piazza|piazzale|corso|largo|strada|vicolo|localit[aà]|loc\.)\b/i.test(x) && /\d/.test(x));
+   if(addrLine) address=addrLine.trim();
+ }
+ let name='';
+ const nameMatch=joined.match(/(?:ragione\s+sociale|denominazione|nome\s+cliente|cliente|customer|negozio|客户名称|店铺)\s*[:\-]?\s*([^\n]+)/i);
+ if(nameMatch){
+   const candidate=nameMatch[1].trim();
+   if(candidate && candidate!==code && !/^(n[°ºo.]?|code|codice)\b/i.test(candidate)) name=candidate;
+ }
+ if(!name){
+   name=lines.find(x=>x.length>=3 && /[A-Za-zÀ-ÿ]/.test(x) && !/\b(via|viale|piazza|corso|largo|strada|indirizzo|address|codice|cliente|customer|telefono|tel\.?|p\.?iva|partita iva|cap)\b/i.test(x))||'';
+ }
+ return {code:code,name:name,address:address};
+}
+async function recognizeCustomer(){
+ const file=document.getElementById('customerPhoto').files[0];
+ const status=document.getElementById('ocrStatus');
+ if(!file){status.textContent=t('请先拍照或选择一张客户资料图片。','Scatta o seleziona prima una foto del cliente.');return}
+ if(!window.Tesseract){status.textContent=t('识别组件没有加载，请刷新页面后再试。','Il componente OCR non è caricato. Aggiorna la pagina e riprova.');return}
+ status.textContent=t('正在识别图片文字…','Riconoscimento testo in corso…');
+ document.getElementById('recognizeCustomerBtn').disabled=true;
+ try{
+   const result=await Tesseract.recognize(file,'ita+eng',{logger:m=>{
+     if(m.status==='recognizing text' && typeof m.progress==='number') status.textContent=t('正在识别：','Riconoscimento: ')+Math.round(m.progress*100)+'%';
+   }});
+   const parsed=parseCustomerText(result.data&&result.data.text);
+   if(parsed.code) document.getElementById('customerCode').value=parsed.code;
+   if(parsed.name) document.getElementById('customerName').value=parsed.name;
+   if(parsed.address) document.getElementById('customerAddress').value=parsed.address;
+   const count=[parsed.code,parsed.name,parsed.address].filter(Boolean).length;
+   status.textContent=count
+     ?t('已识别并自动填写 '+count+' 项，请确认后保存。','Riconosciuti e compilati '+count+' campi. Verifica prima di salvare.')
+     :t('识别完成，但没有可靠识别出客户编号、名称或地址，请手动填写。','Riconoscimento completato, ma codice/nome/indirizzo non sono stati identificati con affidabilità. Compila manualmente.');
+ }catch(e){
+   status.textContent=t('图片识别失败，请换一张更清晰、正面的照片。','Riconoscimento non riuscito. Prova con una foto più nitida e frontale.');
+ }finally{
+   document.getElementById('recognizeCustomerBtn').disabled=false;
+ }
+}
 function login(){
  const company=document.getElementById('company').value.trim().toUpperCase(),u=document.getElementById('user').value.trim(),p=document.getElementById('pass').value;
  const emp=getEmployees().find(e=>e.active&&e.role!=='admin'&&e.username.toLowerCase()===u.toLowerCase()&&e.pin===p);
@@ -115,11 +174,13 @@ function detail(){
 function save(){
  if(!currentUser)return;
  const list=getRecords(),yes=document.getElementById('palletized').value==='yes';
- const customer=(document.getElementById('customerCode').value+' '+document.getElementById('customerName').value).trim()||'—';
- list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,carrier:document.getElementById('carrier').value,boxes:Number(document.getElementById('boxes').value||0),pallets:yes?Number(document.getElementById('palletCount').value||1):0,detail:detail(),notes:document.getElementById('notes').value});
+ const customerCode=document.getElementById('customerCode').value.trim();
+ const customerName=document.getElementById('customerName').value.trim();
+ const customer=(customerCode+' '+customerName).trim()||'—';
+ list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,customerCode:customerCode,customerName:customerName,address:document.getElementById('customerAddress').value.trim(),carrier:document.getElementById('carrier').value,boxes:Number(document.getElementById('boxes').value||0),pallets:yes?Number(document.getElementById('palletCount').value||1):0,detail:detail(),notes:document.getElementById('notes').value});
  localStorage.setItem('hdShipmentRecords',JSON.stringify(list));alert(t('录入已保存。','Registrazione salvata.'));clearForm();renderRecent();
 }
-function clearForm(){['customerCode','customerName','totalWeight','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('boxes').value=1;document.getElementById('palletized').value='no';renderPallets()}
+function clearForm(){['customerCode','customerName','customerAddress','totalWeight','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('customerPhoto').value='';document.getElementById('customerPhotoPreview').classList.add('hidden');document.getElementById('ocrStatus').textContent='';document.getElementById('boxes').value=1;document.getElementById('palletized').value='no';renderPallets()}
 function renderRecent(){
  const body=document.getElementById('recentBody');body.innerHTML='';const all=getRecords();
  const mine=all.map((r,i)=>({r:r,index:i})).filter(x=>x.r.username===currentUser.username).slice(-10).reverse();
@@ -130,13 +191,16 @@ function renderRecent(){
 function editOwn(i){
  if(!currentUser||currentUser.role!=='entry_edit')return;const list=getRecords(),r=list[i];if(!r||r.username!==currentUser.username)return;
  const c=prompt(t('客户 / 店铺','Cliente / negozio'),r.customer);if(c===null)return;
+ const a=prompt(t('客户地址','Indirizzo cliente'),r.address||'');if(a===null)return;
  const b=prompt(t('箱数','Numero colli'),r.boxes);if(b===null)return;
  const p=prompt(t('板数','Numero pallet'),r.pallets);if(p===null)return;
  const d=prompt(t('尺寸 / 重量','Dimensioni / peso'),r.detail);if(d===null)return;
  const n=prompt(t('备注','Note'),r.notes||'');if(n===null)return;
- r.customer=c||'—';r.boxes=Number(b||0);r.pallets=Number(p||0);r.detail=d||'—';r.notes=n;r.employeeEditedAt=new Date().toISOString();list[i]=r;localStorage.setItem('hdShipmentRecords',JSON.stringify(list));renderRecent();
+ r.customer=c||'—';r.address=a;r.boxes=Number(b||0);r.pallets=Number(p||0);r.detail=d||'—';r.notes=n;r.employeeEditedAt=new Date().toISOString();list[i]=r;localStorage.setItem('hdShipmentRecords',JSON.stringify(list));renderRecent();
 }
 populate();document.getElementById('palletized').onchange=renderPallets;document.getElementById('palletCount').onchange=renderPallets;renderPallets();
+document.getElementById('customerPhoto').onchange=function(){const f=this.files[0];const img=document.getElementById('customerPhotoPreview');if(f){img.src=URL.createObjectURL(f);img.classList.remove('hidden')}else{img.classList.add('hidden')}};
+document.getElementById('recognizeCustomerBtn').onclick=recognizeCustomer;
 document.getElementById('loginBtn').onclick=login;document.getElementById('pass').onkeydown=e=>{if(e.key==='Enter')login()};document.getElementById('logoutBtn').onclick=logout;document.getElementById('saveBtn').onclick=save;document.getElementById('clearBtn').onclick=clearForm;
 document.getElementById('lang').value=currentLang;document.getElementById('lang').onchange=e=>{currentLang=e.target.value;applyLang()};applyLang();
 const saved=sessionStorage.getItem('hdEmployeeSession');if(saved){const e=getEmployees().find(x=>x.active&&x.role!=='admin'&&x.username===saved);if(e){currentUser=e;document.getElementById('login').classList.add('hidden');enter()}}
