@@ -147,3 +147,12 @@ Demo data is primarily stored in browser localStorage.
 ---
 
 **HD Freight Audit — Prototype**
+
+## 2026-10-04 · Admin / Employee split
+
+- Admin page opens directly without an admin login screen.
+- Warehouse records now include an admin **Edit / Modifica** action for correcting customer/store, carrier, boxes, pallets, dimensions/weight and notes.
+- Added a separate mobile employee app at `employee.html` with employee-only login.
+- Employee roles remain permission-based: `entry` can submit records; `entry_edit` can also edit their own recent records.
+- Added PWA files (`manifest.webmanifest`, `service-worker.js`, `employee-icon.svg`) so the employee page can be added to a phone home screen as a standalone web app.
+- Current prototype data still uses browser `localStorage`; real multi-phone shared data and secure authentication require a backend/database.
