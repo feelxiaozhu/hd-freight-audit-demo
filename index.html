@@ -10,7 +10,7 @@
 .app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}.side{background:#111827;color:#fff;padding:22px 14px;position:sticky;top:0;height:100vh}
 .brand{font-weight:800;font-size:20px;padding:4px 10px 20px}.brand small{display:block;font-weight:500;color:#9ca3af;font-size:11px;margin-top:4px}
 .nav button{width:100%;border:0;background:transparent;color:#cbd5e1;text-align:left;padding:11px 12px;border-radius:10px;margin:2px 0;font-size:14px}.nav button.active,.nav button:hover{background:#243047;color:#fff}
-.main{padding:24px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:20px}.top h1{font-size:24px;margin:0}.pill{background:#eef2ff;color:#3347a8;padding:8px 12px;border-radius:999px;font-size:12px}
+.main{padding:24px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:20px}.top h1{font-size:24px;margin:0}.topTools{display:flex;align-items:center;gap:10px}.pill{background:#eef2ff;color:#3347a8;padding:8px 12px;border-radius:999px;font-size:12px}#languageSelect{width:auto;min-width:112px;padding:8px 10px;border-radius:10px;border:1px solid #d7dce5;background:#fff}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 2px 9px rgba(16,24,40,.04)}.metric b{font-size:26px;display:block;margin-top:8px}.muted{color:var(--muted);font-size:12px}
 .section{display:none}.section.active{display:block}.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 label{font-size:12px;color:#4b5563;display:block;margin-bottom:5px}input,select,textarea{width:100%;padding:11px 12px;border:1px solid #d7dce5;border-radius:10px;background:#fff;font:inherit}input[type=file]{padding:9px}
@@ -39,7 +39,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </div>
 </aside>
 <main class="main">
-<div class="top"><h1 id="title">Dashboard</h1><div class="pill">Demo · 数据仅保存在当前浏览器</div></div>
+<div class="top"><h1 id="title">Dashboard</h1><div class="topTools"><div class="pill">Demo · 数据仅保存在当前浏览器</div><select id="languageSelect" aria-label="Language"><option value="zh">中文</option><option value="it">Italiano</option></select></div></div>
 
 <section id="dashboard" class="section active">
 <div class="grid">
@@ -131,13 +131,230 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </main>
 </div>
 <script>
-const titles={dashboard:"Dashboard",warehouse:"仓库录入",packages:"箱型 / 托盘",carriers:"快递公司",tariffs:"Tariffario",surcharges:"附加费",invoices:"PDF 发票",audit:"自动对账",settings:"公司 / 员工"};
-document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(b.dataset.page).classList.add('active');document.getElementById('title').textContent=titles[b.dataset.page]});
-const palRadios=[...document.querySelectorAll('input[name=pal]')], block=document.getElementById('palletBlock'), count=document.getElementById('palletCount'), rows=document.getElementById('palletRows');
-function renderPallets(){const n=+count.value;rows.innerHTML='';for(let i=1;i<=n;i++){const d=document.createElement('div');d.className='pallet';d.innerHTML='<b>第 '+i+' 板</b><div class="row3" style="margin-top:8px"><div><label>实际总高度 (cm)</label><input type="number" class="ph" data-i="'+i+'" placeholder="例如 145"></div><div><label>重量 (kg)</label><input type="number" step="0.1" placeholder="例如 318"></div><div><label>货物高度</label><input class="cargo" data-i="'+i+'" readonly placeholder="自动计算"></div></div>';rows.appendChild(d)}document.querySelectorAll('.ph').forEach(x=>x.oninput=()=>{const c=document.querySelector('.cargo[data-i="'+x.dataset.i+'"]');c.value=x.value?Math.max(0,+x.value-15)+' cm':''})}
-palRadios.forEach(r=>r.onchange=()=>{block.style.display=document.querySelector('input[name=pal]:checked').value==='yes'?'block':'none';if(block.style.display==='block')renderPallets()});count.onchange=renderPallets;
-document.getElementById('saveShipment').onclick=()=>{const n=+(localStorage.getItem('demoShipCount')||128)+1;localStorage.setItem('demoShipCount',n);document.getElementById('mShip').textContent=n;alert('测试记录已保存到当前浏览器。正式版会写入共享数据库。')};document.getElementById('mShip').textContent=localStorage.getItem('demoShipCount')||128;
-function addPackage(){const name=prompt('箱型名称，例如：大箱');if(!name)return;document.querySelector('#packageTable tbody').insertAdjacentHTML('beforeend','<tr><td>'+name+'</td><td>80 cm</td><td>60 cm</td><td>60 cm</td><td>—</td></tr>')}
-function addSurcharge(){const code=prompt('附加费代码，例如：COD');if(!code)return;document.querySelector('#surchargeTable tbody').insertAdjacentHTML('beforeend','<tr><td>'+code+'</td><td>自定义附加费</td><td>固定金额</td><td>€ 0.00</td><td>2026-10</td></tr>')}
+const I18N={
+zh:{
+"Wholesale Logistics SaaS Prototype":"批发物流 SaaS 测试版",
+"Dashboard":"总览",
+"Tariffario":"价目表"
+},
+it:{
+"Wholesale Logistics SaaS Prototype":"Prototipo SaaS per logistica all'ingrosso",
+"Dashboard":"Dashboard",
+"仓库录入":"Registrazione magazzino",
+"箱型 / 托盘":"Colli / pallet",
+"快递公司":"Corrieri",
+"Tariffario":"Tariffario",
+"附加费":"Supplementi",
+"PDF 发票":"Fatture PDF",
+"自动对账":"Riconciliazione",
+"公司 / 员工":"Azienda / dipendenti",
+"Demo · 数据仅保存在当前浏览器":"Demo · dati salvati solo in questo browser",
+"本月发货":"Spedizioni del mese",
+"票":"spedizioni",
+"理论运费":"Costo teorico",
+"按合同价":"secondo tariffa contrattuale",
+"发票实收":"Importo fatturato",
+"异常差额":"Scostamento anomalo",
+"17 票需复核":"17 spedizioni da verificare",
+"异常概览":"Panoramica anomalie",
+"运单":"Spedizione",
+"承运商":"Corriere",
+"理论":"Teorico",
+"实收":"Fatturato",
+"差额":"Differenza",
+"原因":"Motivo",
+"重量异常":"Peso anomalo",
+"IS 附加费":"Supplemento IS",
+"一致":"Conforme",
+"仓库发货登记":"Registrazione spedizione magazzino",
+"仓库 / 员工":"Magazzino / addetto",
+"客户编号":"Codice cliente",
+"例如 C01238":"es. C01238",
+"客户名称":"Nome cliente",
+"箱数":"Numero colli",
+"箱型":"Tipo collo",
+"标准箱 60×40×40":"Collo standard 60×40×40",
+"小箱 40×30×30":"Collo piccolo 40×30×30",
+"大箱 80×60×60":"Collo grande 80×60×60",
+"是否打板":"Pallettizzare?",
+"不打板":"No",
+"打板":"Sì",
+"板数":"Numero pallet",
+"托盘规格":"Formato pallet",
+"照片":"Foto",
+"备注":"Note",
+"破损、特殊包装等":"Danni, imballaggio speciale, ecc.",
+"保存记录":"Salva registrazione",
+"清空":"Azzera",
+"EPAL 底板高度按 15 cm；货物高度 = 实际总高度 − 15 cm。":"Altezza base EPAL: 15 cm; altezza merce = altezza totale reale − 15 cm.",
+"箱型 / 托盘设置":"Impostazioni colli / pallet",
+"+ 新增箱型":"+ Aggiungi collo",
+"名称":"Nome",
+"长":"Lunghezza",
+"宽":"Larghezza",
+"高":"Altezza",
+"默认重量":"Peso predefinito",
+"小箱":"Collo piccolo",
+"标准箱":"Collo standard",
+"EPAL 托盘":"Pallet EPAL",
+"15 cm 底板":"base 15 cm",
+"已启用 · 计价规则可配置":"Attivo · regole tariffarie configurabili",
+"已启用":"Attivo",
+"未配置 tariffario":"Tariffario non configurato",
+"未启用":"Non attivo",
+"编辑":"Modifica",
+"Tariffario 上传":"Caricamento tariffario",
+"每家批发商上传自己的合同价。正式版会识别重量段、区域、省份、箱/板计价和生效日期，并保留历史版本。":"Ogni grossista carica il proprio tariffario contrattuale. La versione completa riconoscerà fasce di peso, zone, province, prezzi per collo/pallet e date di validità, mantenendo lo storico.",
+"生效日期":"Data di validità",
+"文件":"File",
+"上传并解析":"Carica e analizza",
+"附加费规则":"Regole supplementi",
+"+ 新增代码":"+ Aggiungi codice",
+"代码":"Codice",
+"计算方式":"Metodo di calcolo",
+"数值":"Valore",
+"生效月":"Mese di validità",
+"超尺寸 / 特殊处理":"Fuori misura / gestione speciale",
+"固定金额":"Importo fisso",
+"指定附加费":"Supplemento specifico",
+"燃油附加费":"Supplemento carburante",
+"百分比":"Percentuale",
+"PDF 发票上传":"Caricamento fatture PDF",
+"正式版会自动提取运单号、计费重量、基础运费、燃油费、COD、IS/L 等附加费和最终金额，再与理论价格逐票匹配。":"La versione completa estrarrà automaticamente numero spedizione, peso tassabile, tariffa base, carburante, COD, supplementi IS/L e importo finale, confrontandoli con il costo teorico.",
+"PDF 发票":"Fattura PDF",
+"上传并解析 PDF":"Carica e analizza PDF",
+"自动对账":"Riconciliazione automatica",
+"理论金额":"Importo teorico",
+"发票金额":"Importo fattura",
+"状态":"Stato",
+"识别原因":"Motivo rilevato",
+"异常":"Anomalia",
+"发票计费重量高于仓库重量":"Peso fatturato superiore al peso registrato in magazzino",
+"复核":"Da verificare",
+"IS 代码":"Codice IS",
+"公司设置":"Impostazioni azienda",
+"公司名称":"Nome azienda",
+"仓库数量":"Numero magazzini",
+"默认语言":"Lingua predefinita",
+"中文":"Cinese",
+"员工与权限":"Dipendenti e permessi",
+"姓名":"Nome",
+"角色":"Ruolo",
+"仓库":"Magazzino",
+"权限":"Permessi",
+"仓库员工":"Addetto magazzino",
+"仅录入":"Solo inserimento",
+"管理员":"Amministratore",
+"全部":"Tutti",
+"实际总高度 (cm)":"Altezza totale reale (cm)",
+"重量 (kg)":"Peso (kg)",
+"货物高度":"Altezza merce",
+"例如 145":"es. 145",
+"例如 318":"es. 318",
+"自动计算":"calcolo automatico",
+"自定义附加费":"Supplemento personalizzato"
+}
+};
+
+const baseTextNodes=[];
+const baseAttrs=[];
+function captureI18n(){
+  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+  let n;
+  while((n=walker.nextNode())){
+    if(n.parentElement && n.parentElement.closest('script,style,#languageSelect')) continue;
+    const raw=n.nodeValue, key=raw.trim();
+    if(key) baseTextNodes.push({node:n,raw:raw,key:key});
+  }
+  document.querySelectorAll('[placeholder]').forEach(function(el){
+    baseAttrs.push({el:el,attr:'placeholder',base:el.getAttribute('placeholder')});
+  });
+}
+let currentLang=localStorage.getItem('hdLanguage')||'zh';
+function tr(base,lang){return (I18N[lang]&&I18N[lang][base])||base}
+function pageTitle(page){
+  const zh={dashboard:"总览",warehouse:"仓库录入",packages:"箱型 / 托盘",carriers:"快递公司",tariffs:"价目表",surcharges:"附加费",invoices:"PDF 发票",audit:"自动对账",settings:"公司 / 员工"};
+  const it={dashboard:"Dashboard",warehouse:"Registrazione magazzino",packages:"Colli / pallet",carriers:"Corrieri",tariffs:"Tariffario",surcharges:"Supplementi",invoices:"Fatture PDF",audit:"Riconciliazione",settings:"Azienda / dipendenti"};
+  return (currentLang==='it'?it:zh)[page];
+}
+function applyLanguage(lang){
+  currentLang=lang;
+  localStorage.setItem('hdLanguage',lang);
+  document.documentElement.lang=lang==='it'?'it':'zh-CN';
+  baseTextNodes.forEach(function(x){
+    let out=tr(x.key,lang);
+    const pallet=x.key.match(/^(\d+) 板$/);
+    if(pallet) out=lang==='it'?pallet[1]+' pallet':pallet[1]+' 板';
+    x.node.nodeValue=x.raw.replace(x.key,out);
+  });
+  baseAttrs.forEach(function(x){x.el.setAttribute(x.attr,tr(x.base,lang));});
+  document.getElementById('languageSelect').value=lang;
+  const active=document.querySelector('#nav button.active');
+  if(active) document.getElementById('title').textContent=pageTitle(active.dataset.page);
+  if(block.style.display==='block') renderPallets();
+}
+document.querySelectorAll('#nav button').forEach(function(b){
+  b.onclick=function(){
+    document.querySelectorAll('#nav button').forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active');
+    document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active')});
+    document.getElementById(b.dataset.page).classList.add('active');
+    document.getElementById('title').textContent=pageTitle(b.dataset.page);
+  };
+});
+const palRadios=[].slice.call(document.querySelectorAll('input[name=pal]'));
+const block=document.getElementById('palletBlock');
+const count=document.getElementById('palletCount');
+const rows=document.getElementById('palletRows');
+function renderPallets(){
+  const n=+count.value;rows.innerHTML='';
+  for(let i=1;i<=n;i++){
+    const d=document.createElement('div');d.className='pallet';
+    const title=currentLang==='it'?'Pallet '+i:'第 '+i+' 板';
+    const h=currentLang==='it'?'Altezza totale reale (cm)':'实际总高度 (cm)';
+    const w=currentLang==='it'?'Peso (kg)':'重量 (kg)';
+    const ch=currentLang==='it'?'Altezza merce':'货物高度';
+    const exH=currentLang==='it'?'es. 145':'例如 145';
+    const exW=currentLang==='it'?'es. 318':'例如 318';
+    const auto=currentLang==='it'?'calcolo automatico':'自动计算';
+    d.innerHTML='<b>'+title+'</b><div class="row3" style="margin-top:8px"><div><label>'+h+'</label><input type="number" class="ph" data-i="'+i+'" placeholder="'+exH+'"></div><div><label>'+w+'</label><input type="number" step="0.1" placeholder="'+exW+'"></div><div><label>'+ch+'</label><input class="cargo" data-i="'+i+'" readonly placeholder="'+auto+'"></div></div>';
+    rows.appendChild(d);
+  }
+  document.querySelectorAll('.ph').forEach(function(x){
+    x.oninput=function(){
+      const c=document.querySelector('.cargo[data-i="'+x.dataset.i+'"]');
+      c.value=x.value?Math.max(0,+x.value-15)+' cm':'';
+    };
+  });
+}
+palRadios.forEach(function(r){
+  r.onchange=function(){
+    block.style.display=document.querySelector('input[name=pal]:checked').value==='yes'?'block':'none';
+    if(block.style.display==='block')renderPallets();
+  };
+});
+count.onchange=renderPallets;
+document.getElementById('saveShipment').onclick=function(){
+  const n=+(localStorage.getItem('demoShipCount')||128)+1;
+  localStorage.setItem('demoShipCount',n);
+  document.getElementById('mShip').textContent=n;
+  alert(currentLang==='it'?'Registrazione demo salvata in questo browser. La versione completa userà un database condiviso.':'测试记录已保存到当前浏览器。正式版会写入共享数据库。');
+};
+document.getElementById('mShip').textContent=localStorage.getItem('demoShipCount')||128;
+function addPackage(){
+  const name=prompt(currentLang==='it'?'Nome del collo, ad esempio: Collo grande':'箱型名称，例如：大箱');
+  if(!name)return;
+  document.querySelector('#packageTable tbody').insertAdjacentHTML('beforeend','<tr><td>'+name+'</td><td>80 cm</td><td>60 cm</td><td>60 cm</td><td>—</td></tr>');
+}
+function addSurcharge(){
+  const code=prompt(currentLang==='it'?'Codice supplemento, ad esempio: COD':'附加费代码，例如：COD');
+  if(!code)return;
+  const name=currentLang==='it'?'Supplemento personalizzato':'自定义附加费';
+  const method=currentLang==='it'?'Importo fisso':'固定金额';
+  document.querySelector('#surchargeTable tbody').insertAdjacentHTML('beforeend','<tr><td>'+code+'</td><td>'+name+'</td><td>'+method+'</td><td>€ 0.00</td><td>2026-10</td></tr>');
+}
+captureI18n();
+document.getElementById('languageSelect').addEventListener('change',function(e){applyLanguage(e.target.value)});
+applyLanguage(currentLang);
 </script>
 </body></html>
