@@ -14,7 +14,7 @@
 label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,textarea{width:100%;padding:12px;border:1px solid #d7dce5;border-radius:11px;background:#fff;font:inherit}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn{border:0;border-radius:11px;padding:11px 14px;background:#e9edf5;color:#253047;font-weight:700}.btn.primary{background:var(--primary);color:#fff}.btn.danger{background:#feeceb;color:var(--danger)}.actions{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}
 .login{position:fixed;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}.login .card{width:min(430px,100%);margin:0}.notice{padding:11px;border-radius:10px;background:#eef4ff;color:#2949a5;font-size:13px}
-.pallet{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px}.scanBox{margin:12px 0;padding:12px;border:1px dashed #b9c3d5;border-radius:12px;background:#fafcff}.photoPreview{display:block;max-width:100%;max-height:240px;border-radius:10px;margin-top:10px}.full{grid-column:1/-1}.muted{font-size:12px;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.pallet{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px}.packageGroup{border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px;background:#fafbfc}.packageGroup .row{align-items:end}.packageGroup .removePackage{align-self:end}.customDims{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}.scanBox{margin:12px 0;padding:12px;border:1px dashed #b9c3d5;border-radius:12px;background:#fafcff}.photoPreview{display:block;max-width:100%;max-height:240px;border-radius:10px;margin-top:10px}.full{grid-column:1/-1}.muted{font-size:12px;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 @media(max-width:520px){.row{grid-template-columns:1fr}.shell{padding:10px}.top{align-items:flex-start}.top .actions{justify-content:flex-end}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -52,9 +52,16 @@ label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,
       <div><label data-zh="客户编号" data-it="Codice cliente">客户编号</label><input id="customerCode" placeholder="C01238"></div>
       <div><label data-zh="客户名称 / 店铺" data-it="Cliente / negozio">客户名称 / 店铺</label><input id="customerName"></div>
       <div class="full"><label data-zh="客户地址" data-it="Indirizzo cliente">客户地址</label><input id="customerAddress" placeholder="Via / Piazza / Viale ..."></div>
-      <div><label data-zh="箱数" data-it="Numero colli">箱数</label><input id="boxes" type="number" min="0" value="1"></div>
-      <div><label data-zh="箱型" data-it="Tipo collo">箱型</label><select id="boxType"><option value="标准箱 60×40×40">标准箱 60×40×40</option><option value="小箱 40×30×30">小箱 40×30×30</option><option value="大箱 80×60×60">大箱 80×60×60</option></select></div>
+      <div><label data-zh="总箱数" data-it="Totale colli">总箱数</label><input id="boxes" type="number" min="0" value="1" readonly></div>
       <div><label data-zh="快递公司" data-it="Corriere">快递公司</label><select id="carrier"></select></div>
+      <div class="full">
+        <div class="actions" style="justify-content:space-between;align-items:center;margin-top:4px">
+          <label style="margin:0" data-zh="箱型明细" data-it="Dettaglio colli">箱型明细</label>
+          <button id="addPackageGroupBtn" class="btn" type="button">+ 添加另一种箱型 / Aggiungi tipo</button>
+        </div>
+        <div class="muted" style="margin-top:5px" data-zh="同一票可以同时录不同尺寸，例如 5 个大箱 + 3 个小箱。" data-it="Nella stessa spedizione puoi inserire più misure, es. 5 colli grandi + 3 piccoli.">同一票可以同时录不同尺寸，例如 5 个大箱 + 3 个小箱。</div>
+        <div id="packageGroups"></div>
+      </div>
       <div><label data-zh="总重量 kg（可选）" data-it="Peso totale kg (facoltativo)">总重量 kg（可选）</label><input id="totalWeight" type="number" min="0" step="0.1"></div>
     </div>
     <label data-zh="是否打板" data-it="Pallettizzare?">是否打板</label>
@@ -95,6 +102,53 @@ function applyLang(){
 function populate(){
  const c=document.getElementById('carrier');c.innerHTML='';getCarriers().forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;c.appendChild(o)});
  const pc=document.getElementById('palletCount');for(let i=1;i<=10;i++){const o=document.createElement('option');o.value=i;o.textContent=i;pc.appendChild(o)}
+}
+function packageTypeOptions(selected){
+ const options=[
+  {v:'small',zh:'小箱 40×30×30',it:'Collo piccolo 40×30×30',dims:'40×30×30'},
+  {v:'standard',zh:'标准箱 60×40×40',it:'Collo standard 60×40×40',dims:'60×40×40'},
+  {v:'large',zh:'大箱 80×60×60',it:'Collo grande 80×60×60',dims:'80×60×60'},
+  {v:'custom',zh:'自定义尺寸',it:'Misure personalizzate',dims:''}
+ ];
+ return options.map(function(o){return '<option value="'+o.v+'" data-dims="'+o.dims+'" '+(o.v===selected?'selected':'')+'>'+(currentLang==='it'?o.it:o.zh)+'</option>'}).join('');
+}
+function addPackageGroup(data){
+ const wrap=document.getElementById('packageGroups');if(!wrap)return;
+ const d=document.createElement('div');d.className='packageGroup';
+ const type=(data&&data.type)||'standard',qty=(data&&data.qty)||1;
+ d.innerHTML='<div class="row"><div><label>'+t('数量','Quantità')+'</label><input class="pkgQty" type="number" min="1" value="'+qty+'"></div><div><label>'+t('箱型','Tipo collo')+'</label><select class="pkgType">'+packageTypeOptions(type)+'</select></div></div><div class="customDims hidden"><div><label>'+t('长 cm','Lunghezza cm')+'</label><input class="pkgL" type="number" min="0" value="'+((data&&data.l)||'')+'"></div><div><label>'+t('宽 cm','Larghezza cm')+'</label><input class="pkgW" type="number" min="0" value="'+((data&&data.w)||'')+'"></div><div><label>'+t('高 cm','Altezza cm')+'</label><input class="pkgH" type="number" min="0" value="'+((data&&data.h)||'')+'"></div></div><div class="actions" style="justify-content:flex-end;margin-top:8px"><button type="button" class="btn danger removePackage">'+t('删除此箱型','Rimuovi tipo')+'</button></div>';
+ wrap.appendChild(d);
+ const typeSel=d.querySelector('.pkgType');
+ const refreshCustom=function(){d.querySelector('.customDims').classList.toggle('hidden',typeSel.value!=='custom');updateBoxTotal()};
+ typeSel.onchange=refreshCustom;
+ d.querySelector('.pkgQty').oninput=updateBoxTotal;
+ d.querySelectorAll('.customDims input').forEach(function(i){i.oninput=updateBoxTotal});
+ d.querySelector('.removePackage').onclick=function(){
+   if(wrap.querySelectorAll('.packageGroup').length<=1){alert(t('至少保留一种箱型。','Mantieni almeno un tipo di collo.'));return}
+   d.remove();updateBoxTotal();
+ };
+ refreshCustom();updateBoxTotal();
+}
+function collectPackageGroups(){
+ const rows=[];
+ document.querySelectorAll('#packageGroups .packageGroup').forEach(function(g){
+   const type=g.querySelector('.pkgType').value;
+   const selected=g.querySelector('.pkgType').selectedOptions[0];
+   const qty=Math.max(0,Number(g.querySelector('.pkgQty').value||0));
+   const l=g.querySelector('.pkgL').value,w=g.querySelector('.pkgW').value,h=g.querySelector('.pkgH').value;
+   let dims=selected?selected.getAttribute('data-dims'):'';
+   if(type==='custom')dims=[l,w,h].map(function(x){return x||'—'}).join('×');
+   const label=selected?selected.textContent:(type||'—');
+   rows.push({type:type,qty:qty,label:label,dims:dims,l:l,w:w,h:h});
+ });
+ return rows;
+}
+function updateBoxTotal(){
+ const total=collectPackageGroups().reduce(function(sum,x){return sum+Number(x.qty||0)},0);
+ const el=document.getElementById('boxes');if(el)el.value=total;
+}
+function resetPackageGroups(){
+ const wrap=document.getElementById('packageGroups');if(!wrap)return;wrap.innerHTML='';addPackageGroup({type:'standard',qty:1});updateBoxTotal();
 }
 function renderPallets(){
  const yes=document.getElementById('palletized').value==='yes';document.getElementById('palletArea').classList.toggle('hidden',!yes);
@@ -166,9 +220,9 @@ function enter(){
 }
 function logout(){sessionStorage.removeItem('hdEmployeeSession');currentUser=null;document.getElementById('login').classList.remove('hidden')}
 function detail(){
- const parts=[document.getElementById('boxType').value];
+ const parts=collectPackageGroups().filter(function(x){return x.qty>0}).map(function(x){return x.qty+' × '+(x.type==='custom'?t('自定义','Personalizzato')+' '+x.dims:x.label)});
  const tw=document.getElementById('totalWeight').value;if(tw)parts.push(t('总重 ','Peso totale ')+tw+'kg');
- document.querySelectorAll('#palletRows .pallet').forEach((p,i)=>{const h=p.querySelector('.ph').value,w=p.querySelector('.pw').value;parts.push((i+1)+': '+(h||'—')+'cm / '+(w||'—')+'kg')});
+ document.querySelectorAll('#palletRows .pallet').forEach((p,i)=>{const h=p.querySelector('.ph').value,w=p.querySelector('.pw').value;parts.push(t('板 ','Pallet ')+(i+1)+': '+(h||'—')+'cm / '+(w||'—')+'kg')});
  return parts.join(' | ');
 }
 function save(){
@@ -177,10 +231,11 @@ function save(){
  const customerCode=document.getElementById('customerCode').value.trim();
  const customerName=document.getElementById('customerName').value.trim();
  const customer=(customerCode+' '+customerName).trim()||'—';
- list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,customerCode:customerCode,customerName:customerName,address:document.getElementById('customerAddress').value.trim(),carrier:document.getElementById('carrier').value,boxes:Number(document.getElementById('boxes').value||0),pallets:yes?Number(document.getElementById('palletCount').value||1):0,detail:detail(),notes:document.getElementById('notes').value});
+ const packageGroups=collectPackageGroups();
+ list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,customerCode:customerCode,customerName:customerName,address:document.getElementById('customerAddress').value.trim(),carrier:document.getElementById('carrier').value,boxes:Number(document.getElementById('boxes').value||0),packageGroups:packageGroups,pallets:yes?Number(document.getElementById('palletCount').value||1):0,detail:detail(),notes:document.getElementById('notes').value});
  localStorage.setItem('hdShipmentRecords',JSON.stringify(list));alert(t('录入已保存。','Registrazione salvata.'));clearForm();renderRecent();
 }
-function clearForm(){['customerCode','customerName','customerAddress','totalWeight','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('customerPhoto').value='';document.getElementById('customerPhotoPreview').classList.add('hidden');document.getElementById('ocrStatus').textContent='';document.getElementById('boxes').value=1;document.getElementById('palletized').value='no';renderPallets()}
+function clearForm(){['customerCode','customerName','customerAddress','totalWeight','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('customerPhoto').value='';document.getElementById('customerPhotoPreview').classList.add('hidden');document.getElementById('ocrStatus').textContent='';resetPackageGroups();document.getElementById('palletized').value='no';renderPallets()}
 function renderRecent(){
  const body=document.getElementById('recentBody');body.innerHTML='';const all=getRecords();
  const mine=all.map((r,i)=>({r:r,index:i})).filter(x=>x.r.username===currentUser.username).slice(-10).reverse();
@@ -198,7 +253,7 @@ function editOwn(i){
  const n=prompt(t('备注','Note'),r.notes||'');if(n===null)return;
  r.customer=c||'—';r.address=a;r.boxes=Number(b||0);r.pallets=Number(p||0);r.detail=d||'—';r.notes=n;r.employeeEditedAt=new Date().toISOString();list[i]=r;localStorage.setItem('hdShipmentRecords',JSON.stringify(list));renderRecent();
 }
-populate();document.getElementById('palletized').onchange=renderPallets;document.getElementById('palletCount').onchange=renderPallets;renderPallets();
+populate();resetPackageGroups();document.getElementById('addPackageGroupBtn').onclick=function(){addPackageGroup({type:'standard',qty:1})};document.getElementById('palletized').onchange=renderPallets;document.getElementById('palletCount').onchange=renderPallets;renderPallets();
 document.getElementById('customerPhoto').onchange=function(){const f=this.files[0];const img=document.getElementById('customerPhotoPreview');if(f){img.src=URL.createObjectURL(f);img.classList.remove('hidden')}else{img.classList.add('hidden')}};
 document.getElementById('recognizeCustomerBtn').onclick=recognizeCustomer;
 document.getElementById('loginBtn').onclick=login;document.getElementById('pass').onkeydown=e=>{if(e.key==='Enter')login()};document.getElementById('logoutBtn').onclick=logout;document.getElementById('saveBtn').onclick=save;document.getElementById('clearBtn').onclick=clearForm;
