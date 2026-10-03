@@ -1,0 +1,10 @@
+{
+  "name":"HD Warehouse",
+  "short_name":"HD Warehouse",
+  "start_url":"./employee.html",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#f5f7fb",
+  "theme_color":"#111827",
+  "icons":[{"src":"employee-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
