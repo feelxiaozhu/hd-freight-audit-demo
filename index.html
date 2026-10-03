@@ -26,7 +26,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-<div id="loginScreen" class="loginScreen">
+<div id="loginScreen" class="loginScreen hidden">
   <div class="loginCard">
     <h2>HD Freight Audit</h2>
     <div class="muted" id="loginSubtitle">Accesso dipendenti / 员工登录</div>
@@ -54,7 +54,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </div>
 </aside>
 <main class="main">
-<div class="top"><h1 id="title">Dashboard</h1><div class="topTools"><div class="pill" id="currentUserPill">—</div><button class="btn smallBtn" id="logoutBtn">退出 / Esci</button><select id="languageSelect" aria-label="Language"><option value="zh">中文</option><option value="it">Italiano</option></select></div></div>
+<div class="top"><h1 id="title">Dashboard</h1><div class="topTools"><div class="pill" id="currentUserPill">—</div><a class="btn smallBtn" href="employee.html">员工手机端 / App dipendenti</a><button class="btn smallBtn hidden" id="logoutBtn">退出 / Esci</button><select id="languageSelect" aria-label="Language"><option value="zh">中文</option><option value="it">Italiano</option></select></div></div>
 
 <section id="dashboard" class="section active">
 <div class="grid">
@@ -78,7 +78,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
     <div><h3 style="margin:0">仓库录入记录</h3><p class="muted" style="margin:6px 0 0">后台只查看员工提交结果，不显示手机端录入表单。</p></div>
   </div>
   <div style="overflow:auto;margin-top:10px">
-    <table><thead><tr><th>时间</th><th>员工</th><th>客户 / 店铺</th><th>快递</th><th>箱数</th><th>板数</th><th>尺寸 / 重量</th><th>备注</th></tr></thead><tbody id="shipmentRecordsBody"></tbody></table>
+    <table><thead><tr><th>时间</th><th>员工</th><th>客户 / 店铺</th><th>快递</th><th>箱数</th><th>板数</th><th>尺寸 / 重量</th><th>备注</th><th>操作 / Azioni</th></tr></thead><tbody id="shipmentRecordsBody"></tbody></table>
   </div>
 </div>
 </section>
@@ -686,13 +686,39 @@ function logout(){localStorage.removeItem('hdSessionUser');currentUser=null;docu
 function getShipmentRecords(){try{return JSON.parse(localStorage.getItem('hdShipmentRecords')||'[]')}catch(e){return []}}
 function renderShipmentRecords(){
  const body=document.getElementById('shipmentRecordsBody');if(!body)return;body.innerHTML='';
- const list=getShipmentRecords().slice().reverse();
- if(!list.length){body.innerHTML='<tr><td colspan="8" class="muted">'+(currentLang==='it'?'Nessuna registrazione ancora.':'还没有员工提交记录。')+'</td></tr>';return;}
- list.forEach(function(r){
+ const source=getShipmentRecords();
+ const list=source.map(function(r,i){return {r:r,index:i}}).reverse();
+ if(!list.length){body.innerHTML='<tr><td colspan="9" class="muted">'+(currentLang==='it'?'Nessuna registrazione ancora.':'还没有员工提交记录。')+'</td></tr>';return;}
+ list.forEach(function(item){
+  const r=item.r;
   const tr=document.createElement('tr');
-  tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.employee+'</td><td>'+r.customer+'</td><td>'+r.carrier+'</td><td>'+r.boxes+'</td><td>'+r.pallets+'</td><td>'+r.detail+'</td><td>'+(r.notes||'—')+'</td>';
+  tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.employee+'</td><td>'+r.customer+'</td><td>'+r.carrier+'</td><td>'+r.boxes+'</td><td>'+r.pallets+'</td><td>'+r.detail+'</td><td>'+(r.notes||'—')+'</td><td><button class="btn smallBtn" data-edit-record="'+item.index+'">'+(currentLang==='it'?'Modifica':'编辑')+'</button></td>';
   body.appendChild(tr);
  });
+ body.querySelectorAll('[data-edit-record]').forEach(function(btn){
+   btn.onclick=function(){editShipmentRecord(Number(btn.getAttribute('data-edit-record')))};
+ });
+}
+function editShipmentRecord(index){
+ const list=getShipmentRecords();
+ const r=list[index]; if(!r)return;
+ const ask=function(label,value){const v=prompt(label,value==null?'':String(value));return v===null?null:v.trim()};
+ const customer=ask(currentLang==='it'?'Cliente / negozio':'客户 / 店铺',r.customer); if(customer===null)return;
+ const carrier=ask(currentLang==='it'?'Corriere':'快递公司',r.carrier); if(carrier===null)return;
+ const boxes=ask(currentLang==='it'?'Numero colli':'箱数',r.boxes); if(boxes===null)return;
+ const pallets=ask(currentLang==='it'?'Numero pallet':'板数',r.pallets); if(pallets===null)return;
+ const detail=ask(currentLang==='it'?'Dimensioni / peso':'尺寸 / 重量',r.detail); if(detail===null)return;
+ const notes=ask(currentLang==='it'?'Note':'备注',r.notes||''); if(notes===null)return;
+ r.customer=customer||'—';
+ r.carrier=carrier||r.carrier;
+ r.boxes=Number(boxes||0);
+ r.pallets=Number(pallets||0);
+ r.detail=detail||'—';
+ r.notes=notes;
+ r.adminEditedAt=new Date().toISOString();
+ list[index]=r;
+ localStorage.setItem('hdShipmentRecords',JSON.stringify(list));
+ renderShipmentRecords();
 }
 function collectPalletDetail(){
  const items=[];document.querySelectorAll('#palletRows .pallet').forEach(function(p,i){
@@ -725,6 +751,6 @@ document.getElementById('loginPass').addEventListener('keydown',function(e){if(e
 renderEmployees();renderShipmentRecords();
 captureI18n();
 document.getElementById('languageSelect').addEventListener('change',function(e){applyLanguage(e.target.value)});
-applyLanguage(currentLang);restoreSession();
+applyLanguage(currentLang);currentUser=DEFAULT_EMPLOYEES[0];enterApp();
 </script>
 </body></html>
