@@ -156,3 +156,13 @@ Demo data is primarily stored in browser localStorage.
 - Employee roles remain permission-based: `entry` can submit records; `entry_edit` can also edit their own recent records.
 - Added PWA files (`manifest.webmanifest`, `service-worker.js`, `employee-icon.svg`) so the employee page can be added to a phone home screen as a standalone web app.
 - Current prototype data still uses browser `localStorage`; real multi-phone shared data and secure authentication require a backend/database.
+
+
+## 2026-10-04 · Customer photo recognition
+
+- Restored **customer photo capture** on the employee mobile app.
+- Employee can photograph/select a customer label or document and run browser-side OCR.
+- OCR attempts to fill **customer code**, **customer/store name**, and **customer address** automatically.
+- Recognition results are always editable before saving.
+- Shipment records now store the customer address, and the admin record list can display and edit it.
+- The GitHub-only version performs OCR in the browser; no Vercel backend is used.
