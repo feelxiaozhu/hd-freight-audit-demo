@@ -78,7 +78,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
     <div><h3 style="margin:0">仓库录入记录</h3><p class="muted" style="margin:6px 0 0">后台只查看员工提交结果，不显示手机端录入表单。</p></div>
   </div>
   <div style="overflow:auto;margin-top:10px">
-    <table><thead><tr><th>时间</th><th>员工</th><th>客户 / 店铺</th><th>地址</th><th>快递</th><th>箱数</th><th>板数</th><th>尺寸 / 重量</th><th>备注</th><th>操作 / Azioni</th></tr></thead><tbody id="shipmentRecordsBody"></tbody></table>
+    <table><thead><tr><th>时间</th><th>员工</th><th>Rif. Mittente</th><th>客户 / 店铺</th><th>地址</th><th>快递</th><th>箱数</th><th>板数</th><th>尺寸 / 重量</th><th>备注</th><th>操作 / Azioni</th></tr></thead><tbody id="shipmentRecordsBody"></tbody></table>
   </div>
 </div>
 </section>
@@ -188,7 +188,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
     <div class="metric"><span class="muted">差额</span><b id="auditDifference">—</b><span class="muted">理论 vs 发票</span></div>
     <div class="metric"><span class="muted">逐票匹配</span><b id="auditMatched">—</b><span class="muted">明细解析完成后显示</span></div>
   </div>
-  <div class="notice" style="margin-top:12px">当前 GitHub 前端版先把月度批次和数据关系整理正确；在发票逐票明细尚未完整解析前，金额不会用假数字代替。</div>
+  <div class="notice" style="margin-top:12px">匹配优先级：① Riferimento Mittente 精确匹配（自动去掉横杠、空格、斜杠）；② 客户名称标准化匹配（忽略 SRL / S.R.L.、大小写、标点和多余空格）；③ 名称模糊候选。当前 GitHub 前端版在发票逐票明细尚未完整解析前，不会用假金额代替。</div>
 </div>
 
 <div class="card" style="margin-top:14px">
@@ -797,16 +797,37 @@ function enterApp(){
  renderEmployees();renderShipmentRecords();
 }
 function logout(){localStorage.removeItem('hdSessionUser');currentUser=null;document.getElementById('loginScreen').classList.remove('hidden');document.querySelector('.side').classList.remove('hidden');}
+function normalizeSenderReference(value){return String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
+function normalizeCustomerName(value){
+ return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
+  .replace(/\b(S\.?R\.?L\.?|SOCIETA\s+A\s+RESPONSABILITA\s+LIMITATA|SRLS|S\.?P\.?A\.?|SAS|SNC)\b/g,' ')
+  .replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function customerNameScore(a,b){
+ const x=normalizeCustomerName(a),y=normalizeCustomerName(b);if(!x||!y)return 0;if(x===y)return 1;
+ if(x.includes(y)||y.includes(x))return 0.95;
+ const xa=x.split(' ').filter(Boolean),ya=y.split(' ').filter(Boolean);
+ const common=xa.filter(function(w){return ya.includes(w)}).length;
+ const union=new Set(xa.concat(ya)).size;
+ return union?common/union:0;
+}
+function matchShipmentCandidate(invoiceRow,shipments){
+ const ref=normalizeSenderReference(invoiceRow&&invoiceRow.senderReference);
+ if(ref){const exact=shipments.find(function(s){return normalizeSenderReference(s.senderReference)===ref});if(exact)return {shipment:exact,method:'sender_reference',score:1}}
+ let best=null,bestScore=0;
+ shipments.forEach(function(s){const score=customerNameScore(invoiceRow&&invoiceRow.customerName,s.customerName||s.customer);if(score>bestScore){best=s;bestScore=score}});
+ return bestScore>=0.72?{shipment:best,method:bestScore>=0.95?'customer_normalized':'customer_fuzzy',score:bestScore}:null;
+}
 function getShipmentRecords(){try{return JSON.parse(localStorage.getItem('hdShipmentRecords')||'[]')}catch(e){return []}}
 function renderShipmentRecords(){
  const body=document.getElementById('shipmentRecordsBody');if(!body)return;body.innerHTML='';
  const source=getShipmentRecords();
  const list=source.map(function(r,i){return {r:r,index:i}}).reverse();
- if(!list.length){body.innerHTML='<tr><td colspan="10" class="muted">'+(currentLang==='it'?'Nessuna registrazione ancora.':'还没有员工提交记录。')+'</td></tr>';return;}
+ if(!list.length){body.innerHTML='<tr><td colspan="11" class="muted">'+(currentLang==='it'?'Nessuna registrazione ancora.':'还没有员工提交记录。')+'</td></tr>';return;}
  list.forEach(function(item){
   const r=item.r;
   const tr=document.createElement('tr');
-  tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.employee+'</td><td>'+r.customer+'</td><td>'+(r.address||'—')+'</td><td>'+r.carrier+'</td><td>'+r.boxes+'</td><td>'+r.pallets+'</td><td>'+r.detail+'</td><td>'+(r.notes||'—')+'</td><td><button class="btn smallBtn" data-edit-record="'+item.index+'">'+(currentLang==='it'?'Modifica':'编辑')+'</button></td>';
+  tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.employee+'</td><td>'+(r.senderReference||'—')+'</td><td>'+r.customer+'</td><td>'+(r.address||'—')+'</td><td>'+r.carrier+'</td><td>'+r.boxes+'</td><td>'+r.pallets+'</td><td>'+r.detail+'</td><td>'+(r.notes||'—')+'</td><td><button class="btn smallBtn" data-edit-record="'+item.index+'">'+(currentLang==='it'?'Modifica':'编辑')+'</button></td>';
   body.appendChild(tr);
  });
  body.querySelectorAll('[data-edit-record]').forEach(function(btn){
@@ -817,6 +838,7 @@ function editShipmentRecord(index){
  const list=getShipmentRecords();
  const r=list[index]; if(!r)return;
  const ask=function(label,value){const v=prompt(label,value==null?'':String(value));return v===null?null:v.trim()};
+ const senderReference=ask('Riferimento Mittente',r.senderReference||''); if(senderReference===null)return;
  const customer=ask(currentLang==='it'?'Cliente / negozio':'客户 / 店铺',r.customer); if(customer===null)return;
  const address=ask(currentLang==='it'?'Indirizzo cliente':'客户地址',r.address||''); if(address===null)return;
  const carrier=ask(currentLang==='it'?'Corriere':'快递公司',r.carrier); if(carrier===null)return;
@@ -824,6 +846,7 @@ function editShipmentRecord(index){
  const pallets=ask(currentLang==='it'?'Numero pallet':'板数',r.pallets); if(pallets===null)return;
  const detail=ask(currentLang==='it'?'Dimensioni / peso':'尺寸 / 重量',r.detail); if(detail===null)return;
  const notes=ask(currentLang==='it'?'Note':'备注',r.notes||''); if(notes===null)return;
+ r.senderReference=normalizeSenderReference(senderReference);
  r.customer=customer||'—';
  r.address=address;
  r.carrier=carrier||r.carrier;
