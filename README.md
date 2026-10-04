@@ -189,3 +189,15 @@ Demo data is primarily stored in browser localStorage.
 - Added **custom dimensions** for non-standard boxes.
 - Shipment records store the structured box-group breakdown in addition to the total box count.
 - The admin record detail can therefore show mixed packaging instead of assuming one size for the whole shipment.
+
+
+## 2026-10-04 · Customer-name reconciliation
+
+- Corrected the real warehouse workflow: warehouse staff do **not** create the courier shipment and therefore do not have a BRT tracking number or Riferimento Mittente at entry time.
+- Removed the newly-added mandatory **Riferimento Mittente** field from the employee workflow.
+- Monthly reconciliation now treats **customer / store name** as the primary matching field.
+- Customer names are normalized before matching: case, punctuation, extra spaces and legal suffixes such as **SRL / S.R.L.** are ignored.
+- Example: **Ocline Group SRL** can match **Ocline Group**.
+- If multiple records for the same normalized customer exist in the same month, address, box count, weight and date are used as secondary signals.
+- Ambiguous candidates are intended for manual confirmation rather than forced automatic matching.
+- Internal customer code remains warehouse metadata but is not assumed to exist on the carrier invoice.
