@@ -21,7 +21,7 @@ Prototype SaaS for freight-cost control, warehouse shipment entry, carrier tarif
 - Mixed box-size entry in one shipment with automatic total box count
 - Automatic cargo-height calculation from EPAL total height
 - Dynamic carrier management
-- New carriers automatically become available in mobile warehouse entry, Tariffario upload and PDF invoice upload
+- New carriers automatically become available in Tariffario upload and PDF invoice upload; warehouse employees do not choose the carrier
 - Tariffario upload for PDF / Excel / CSV / TXT
 - Carrier-safe Tariffario import: the user selects the carrier before upload and the selected carrier remains authoritative
 - If a document clearly appears to belong to another carrier, the import is blocked
@@ -191,6 +191,15 @@ Demo data is primarily stored in browser localStorage.
 - Shipment records store the structured box-group breakdown in addition to the total box count.
 - The admin record detail can therefore show mixed packaging instead of assuming one size for the whole shipment.
 
+
+## 2026-10-04 · Employee capture simplification
+
+- Removed the **carrier / corriere selector** from the employee mobile app because warehouse staff do not know which courier will be used.
+- New warehouse records therefore leave the carrier unassigned at entry time.
+- Monthly reconciliation now searches all warehouse records for the selected month and does not require an employee-side carrier assignment before customer-name matching.
+- Simplified customer OCR to one **Photo & recognize customer** action: taking/selecting the photo automatically starts OCR.
+- Removed the separate **Riconosci cliente** button.
+- The employee recent-record table no longer shows a courier column.
 
 ## 2026-10-04 · Dashboard and anomaly workflow
 
