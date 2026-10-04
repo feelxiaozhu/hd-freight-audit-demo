@@ -706,7 +706,7 @@ function findTariffForMonth(carrier,month){
 function renderMonthlyAudit(){
  const month=document.getElementById('auditMonth')?document.getElementById('auditMonth').value:'';const carrier=document.getElementById('auditCarrier')?document.getElementById('auditCarrier').value:'';
  if(!month||!carrier)return;
- const shipments=getShipmentRecords().filter(function(r){return String(r.time||'').slice(0,7)===month&&r.carrier===carrier});
+ const shipments=getShipmentRecords().filter(function(r){return String(r.time||'').slice(0,7)===month});
  const invoices=getInvoices().filter(function(i){return (i.month||String(i.date||'').slice(0,7))===month&&i.carrier===carrier});
  const tariff=findTariffForMonth(carrier,month);
  const issues=getAuditIssues().filter(function(i){return i.month===month&&i.carrier===carrier});
@@ -874,7 +874,7 @@ function renderShipmentRecords(){
  list.forEach(function(item){
   const r=item.r;
   const tr=document.createElement('tr');
-  tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.employee+'</td><td>'+r.customer+'</td><td>'+(r.address||'—')+'</td><td>'+r.carrier+'</td><td>'+r.boxes+'</td><td>'+r.pallets+'</td><td>'+r.detail+'</td><td>'+(r.notes||'—')+'</td><td><button class="btn smallBtn" data-edit-record="'+item.index+'">'+(currentLang==='it'?'Modifica':'编辑')+'</button></td>';
+  tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.employee+'</td><td>'+r.customer+'</td><td>'+(r.address||'—')+'</td><td>'+(r.carrier||'—')+'</td><td>'+r.boxes+'</td><td>'+r.pallets+'</td><td>'+r.detail+'</td><td>'+(r.notes||'—')+'</td><td><button class="btn smallBtn" data-edit-record="'+item.index+'">'+(currentLang==='it'?'Modifica':'编辑')+'</button></td>';
   body.appendChild(tr);
  });
  body.querySelectorAll('[data-edit-record]').forEach(function(btn){
