@@ -4,7 +4,8 @@ Prototype SaaS for freight-cost control, warehouse shipment entry, carrier tarif
 
 ## Live demo
 
-https://feelxiaozhu.github.io/hd-freight-audit-demo/
+- **Admin / Back Office:** https://feelxiaozhu.github.io/hd-freight-audit-demo/
+- **Employee Mobile App:** https://feelxiaozhu.github.io/hd-freight-audit-demo/employee.html
 
 ## Current demo features
 
