@@ -52,6 +52,7 @@ label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,
       <div><label data-zh="客户编号" data-it="Codice cliente">客户编号</label><input id="customerCode" placeholder="C01238"></div>
       <div><label data-zh="客户名称 / 店铺" data-it="Cliente / negozio">客户名称 / 店铺</label><input id="customerName"></div>
       <div class="full"><label data-zh="客户地址" data-it="Indirizzo cliente">客户地址</label><input id="customerAddress" placeholder="Via / Piazza / Viale ..."></div>
+      <div class="full"><label data-zh="Riferimento Mittente / 客户发票号" data-it="Riferimento Mittente / N. fattura cliente">Riferimento Mittente / 客户发票号</label><input id="senderReference" inputmode="numeric" placeholder="例如 26004321 / es. 26004321"><div class="muted" style="margin-top:4px" data-zh="可输入 2600-4321，系统保存时自动规范为 26004321。" data-it="Puoi inserire 2600-4321: al salvataggio diventa automaticamente 26004321.">可输入 2600-4321，系统保存时自动规范为 26004321。</div></div>
       <div><label data-zh="总箱数" data-it="Totale colli">总箱数</label><input id="boxes" type="number" min="0" value="1" readonly></div>
       <div><label data-zh="快递公司" data-it="Corriere">快递公司</label><select id="carrier"></select></div>
       <div class="full">
@@ -92,6 +93,7 @@ function getEmployees(){try{const x=JSON.parse(localStorage.getItem('hdEmployees
 function getCarriers(){try{const x=JSON.parse(localStorage.getItem('hdCarriers')||'null');return Array.isArray(x)&&x.length?x:['BRT','GLS']}catch(e){return ['BRT','GLS']}}
 function getRecords(){try{return JSON.parse(localStorage.getItem('hdShipmentRecords')||'[]')}catch(e){return []}}
 function t(zh,it){return currentLang==='it'?it:zh}
+function normalizeSenderReference(value){return String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
 function applyLang(){
  localStorage.setItem('hdLang',currentLang);document.documentElement.lang=currentLang==='it'?'it':'zh-CN';
  document.querySelectorAll('[data-zh]').forEach(el=>el.textContent=currentLang==='it'?el.dataset.it:el.dataset.zh);
@@ -231,11 +233,14 @@ function save(){
  const customerCode=document.getElementById('customerCode').value.trim();
  const customerName=document.getElementById('customerName').value.trim();
  const customer=(customerCode+' '+customerName).trim()||'—';
+ const senderReference=normalizeSenderReference(document.getElementById('senderReference').value);
+ if(!senderReference){alert(t('请填写 Riferimento Mittente / 客户发票号。','Inserisci il Riferimento Mittente / numero fattura cliente.'));document.getElementById('senderReference').focus();return}
+ document.getElementById('senderReference').value=senderReference;
  const packageGroups=collectPackageGroups();
- list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,customerCode:customerCode,customerName:customerName,address:document.getElementById('customerAddress').value.trim(),carrier:document.getElementById('carrier').value,boxes:Number(document.getElementById('boxes').value||0),packageGroups:packageGroups,pallets:yes?Number(document.getElementById('palletCount').value||1):0,detail:detail(),notes:document.getElementById('notes').value});
+ list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,customerCode:customerCode,customerName:customerName,address:document.getElementById('customerAddress').value.trim(),senderReference:senderReference,carrier:document.getElementById('carrier').value,boxes:Number(document.getElementById('boxes').value||0),packageGroups:packageGroups,pallets:yes?Number(document.getElementById('palletCount').value||1):0,detail:detail(),notes:document.getElementById('notes').value});
  localStorage.setItem('hdShipmentRecords',JSON.stringify(list));alert(t('录入已保存。','Registrazione salvata.'));clearForm();renderRecent();
 }
-function clearForm(){['customerCode','customerName','customerAddress','totalWeight','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('customerPhoto').value='';document.getElementById('customerPhotoPreview').classList.add('hidden');document.getElementById('ocrStatus').textContent='';resetPackageGroups();document.getElementById('palletized').value='no';renderPallets()}
+function clearForm(){['customerCode','customerName','customerAddress','senderReference','totalWeight','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('customerPhoto').value='';document.getElementById('customerPhotoPreview').classList.add('hidden');document.getElementById('ocrStatus').textContent='';resetPackageGroups();document.getElementById('palletized').value='no';renderPallets()}
 function renderRecent(){
  const body=document.getElementById('recentBody');body.innerHTML='';const all=getRecords();
  const mine=all.map((r,i)=>({r:r,index:i})).filter(x=>x.r.username===currentUser.username).slice(-10).reverse();
@@ -254,6 +259,7 @@ function editOwn(i){
  r.customer=c||'—';r.address=a;r.boxes=Number(b||0);r.pallets=Number(p||0);r.detail=d||'—';r.notes=n;r.employeeEditedAt=new Date().toISOString();list[i]=r;localStorage.setItem('hdShipmentRecords',JSON.stringify(list));renderRecent();
 }
 populate();resetPackageGroups();document.getElementById('addPackageGroupBtn').onclick=function(){addPackageGroup({type:'standard',qty:1})};document.getElementById('palletized').onchange=renderPallets;document.getElementById('palletCount').onchange=renderPallets;renderPallets();
+document.getElementById('senderReference').onblur=function(){this.value=normalizeSenderReference(this.value)};
 document.getElementById('customerPhoto').onchange=function(){const f=this.files[0];const img=document.getElementById('customerPhotoPreview');if(f){img.src=URL.createObjectURL(f);img.classList.remove('hidden')}else{img.classList.add('hidden')}};
 document.getElementById('recognizeCustomerBtn').onclick=recognizeCustomer;
 document.getElementById('loginBtn').onclick=login;document.getElementById('pass').onkeydown=e=>{if(e.key==='Enter')login()};document.getElementById('logoutBtn').onclick=logout;document.getElementById('saveBtn').onclick=save;document.getElementById('clearBtn').onclick=clearForm;
