@@ -45,7 +45,6 @@ label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,
       <div class="muted" style="margin-top:4px" data-zh="拍客户资料、标签或单据，识别客户编号、名称和地址；识别后请员工确认。" data-it="Scatta una foto a etichetta/documento cliente: il sistema prova a leggere codice, nome e indirizzo. Verificare sempre prima di salvare.">拍客户资料、标签或单据，识别客户编号、名称和地址；识别后请员工确认。</div>
       <input id="customerPhoto" type="file" accept="image/*" capture="environment" style="margin-top:10px">
       <img id="customerPhotoPreview" class="photoPreview hidden" alt="customer photo preview">
-      <div class="actions" style="margin-top:10px"><button id="recognizeCustomerBtn" class="btn primary" type="button">识别客户 / Riconosci cliente</button></div>
       <div id="ocrStatus" class="muted" style="margin-top:8px"></div>
     </div>
     <div class="row">
@@ -53,7 +52,6 @@ label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,
       <div><label data-zh="客户名称 / 店铺" data-it="Cliente / negozio">客户名称 / 店铺</label><input id="customerName"></div>
       <div class="full"><label data-zh="客户地址" data-it="Indirizzo cliente">客户地址</label><input id="customerAddress" placeholder="Via / Piazza / Viale ..."></div>
       <div><label data-zh="总箱数" data-it="Totale colli">总箱数</label><input id="boxes" type="number" min="0" value="1" readonly></div>
-      <div><label data-zh="快递公司" data-it="Corriere">快递公司</label><select id="carrier"></select></div>
       <div class="full">
         <div class="actions" style="justify-content:space-between;align-items:center;margin-top:4px">
           <label style="margin:0" data-zh="箱型明细" data-it="Dettaglio colli">箱型明细</label>
@@ -62,7 +60,7 @@ label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,
         <div class="muted" style="margin-top:5px" data-zh="同一票可以同时录不同尺寸，例如 5 个大箱 + 3 个小箱。" data-it="Nella stessa spedizione puoi inserire più misure, es. 5 colli grandi + 3 piccoli.">同一票可以同时录不同尺寸，例如 5 个大箱 + 3 个小箱。</div>
         <div id="packageGroups"></div>
       </div>
-      <div><label data-zh="总重量 kg（可选）" data-it="Peso totale kg (facoltativo)">总重量 kg（可选）</label><input id="totalWeight" type="number" min="0" step="0.1"></div>
+      <div><label data-zh="总重量 kg（自动）" data-it="Peso totale kg (automatico)">总重量 kg（自动）</label><input id="totalWeight" type="number" min="0" step="0.1" value="0" readonly></div>
     </div>
     <label data-zh="是否打板" data-it="Pallettizzare?">是否打板</label>
     <select id="palletized"><option value="no">不打板 / No</option><option value="yes">打板 / Sì</option></select>
@@ -76,7 +74,7 @@ label{display:block;font-size:12px;color:#4b5563;margin:10px 0 5px}input,select,
 
   <div class="card">
     <div class="actions" style="justify-content:space-between;align-items:center"><b id="recentTitle">我的最近录入</b><span id="perm" class="muted"></span></div>
-    <div style="overflow:auto;margin-top:8px"><table><thead><tr><th>时间</th><th>客户</th><th>快递</th><th>箱/板</th><th id="actHead">操作</th></tr></thead><tbody id="recentBody"></tbody></table></div>
+    <div style="overflow:auto;margin-top:8px"><table><thead><tr><th>时间</th><th>客户</th><th>箱/板</th><th id="actHead">操作</th></tr></thead><tbody id="recentBody"></tbody></table></div>
   </div>
   <div class="muted">当前是前端测试版：数据保存在当前设备浏览器。正式多人版需要共享数据库与服务器认证。</div>
 </div>
@@ -89,7 +87,6 @@ const DEFAULT_EMPLOYEES=[
 ];
 let currentUser=null,currentLang=localStorage.getItem('hdLang')||'zh';
 function getEmployees(){try{const x=JSON.parse(localStorage.getItem('hdEmployees')||'null');return Array.isArray(x)?x:DEFAULT_EMPLOYEES.slice()}catch(e){return DEFAULT_EMPLOYEES.slice()}}
-function getCarriers(){try{const x=JSON.parse(localStorage.getItem('hdCarriers')||'null');return Array.isArray(x)&&x.length?x:['BRT','GLS']}catch(e){return ['BRT','GLS']}}
 function getRecords(){try{return JSON.parse(localStorage.getItem('hdShipmentRecords')||'[]')}catch(e){return []}}
 function t(zh,it){return currentLang==='it'?it:zh}
 function applyLang(){
@@ -100,7 +97,6 @@ function applyLang(){
  if(currentUser) enter();
 }
 function populate(){
- const c=document.getElementById('carrier');c.innerHTML='';getCarriers().forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;c.appendChild(o)});
  const pc=document.getElementById('palletCount');for(let i=1;i<=10;i++){const o=document.createElement('option');o.value=i;o.textContent=i;pc.appendChild(o)}
 }
 function packageTypeOptions(selected){
@@ -116,12 +112,26 @@ function addPackageGroup(data){
  const wrap=document.getElementById('packageGroups');if(!wrap)return;
  const d=document.createElement('div');d.className='packageGroup';
  const type=(data&&data.type)||'standard',qty=(data&&data.qty)||1;
- d.innerHTML='<div class="row"><div><label>'+t('数量','Quantità')+'</label><input class="pkgQty" type="number" min="1" value="'+qty+'"></div><div><label>'+t('箱型','Tipo collo')+'</label><select class="pkgType">'+packageTypeOptions(type)+'</select></div></div><div class="customDims hidden"><div><label>'+t('长 cm','Lunghezza cm')+'</label><input class="pkgL" type="number" min="0" value="'+((data&&data.l)||'')+'"></div><div><label>'+t('宽 cm','Larghezza cm')+'</label><input class="pkgW" type="number" min="0" value="'+((data&&data.w)||'')+'"></div><div><label>'+t('高 cm','Altezza cm')+'</label><input class="pkgH" type="number" min="0" value="'+((data&&data.h)||'')+'"></div></div><div class="actions" style="justify-content:flex-end;margin-top:8px"><button type="button" class="btn danger removePackage">'+t('删除此箱型','Rimuovi tipo')+'</button></div>';
+ d.innerHTML='<div class="row"><div><label>'+t('数量','Quantità')+'</label><input class="pkgQty" type="number" min="1" value="'+qty+'"></div><div><label>'+t('箱型','Tipo collo')+'</label><select class="pkgType">'+packageTypeOptions(type)+'</select></div></div><div class="customDims hidden"><div><label>'+t('长 cm','Lunghezza cm')+'</label><input class="pkgL" type="number" min="0" value="'+((data&&data.l)||'')+'"></div><div><label>'+t('宽 cm','Larghezza cm')+'</label><input class="pkgW" type="number" min="0" value="'+((data&&data.w)||'')+'"></div><div><label>'+t('高 cm','Altezza cm')+'</label><input class="pkgH" type="number" min="0" value="'+((data&&data.h)||'')+'"></div></div><div class="boxWeightRows"></div><div class="actions" style="justify-content:flex-end;margin-top:8px"><button type="button" class="btn danger removePackage">'+t('删除此箱型','Rimuovi tipo')+'</button></div>';
  wrap.appendChild(d);
  const typeSel=d.querySelector('.pkgType');
- const refreshCustom=function(){d.querySelector('.customDims').classList.toggle('hidden',typeSel.value!=='custom');updateBoxTotal()};
+ const renderWeights=function(){
+   const q=Math.max(1,Number(d.querySelector('.pkgQty').value||1));
+   const box=d.querySelector('.boxWeightRows');
+   const old=Array.from(box.querySelectorAll('.pkgWeight')).map(function(x){return x.value});
+   if(data&&Array.isArray(data.weights)&&!box.dataset.loaded){data.weights.forEach(function(v,i){old[i]=v});box.dataset.loaded='1'}
+   box.innerHTML='<label style="margin-top:10px">'+t('每箱重量 kg','Peso di ogni collo kg')+'</label>';
+   for(let i=0;i<q;i++){
+     const row=document.createElement('div');row.className='row';row.style.marginTop='6px';
+     row.innerHTML='<div class="full"><input class="pkgWeight" type="number" min="0" step="0.1" placeholder="'+t('第 ','Collo ')+(i+1)+t(' 箱重量 kg',' · kg')+'" value="'+(old[i]||'')+'"></div>';
+     box.appendChild(row);
+   }
+   box.querySelectorAll('.pkgWeight').forEach(function(input){input.oninput=updateBoxTotal});
+   updateBoxTotal();
+ };
+ const refreshCustom=function(){d.querySelector('.customDims').classList.toggle('hidden',typeSel.value!=='custom');renderWeights();updateBoxTotal()};
  typeSel.onchange=refreshCustom;
- d.querySelector('.pkgQty').oninput=updateBoxTotal;
+ d.querySelector('.pkgQty').oninput=function(){renderWeights();updateBoxTotal()};
  d.querySelectorAll('.customDims input').forEach(function(i){i.oninput=updateBoxTotal});
  d.querySelector('.removePackage').onclick=function(){
    if(wrap.querySelectorAll('.packageGroup').length<=1){alert(t('至少保留一种箱型。','Mantieni almeno un tipo di collo.'));return}
@@ -139,13 +149,15 @@ function collectPackageGroups(){
    let dims=selected?selected.getAttribute('data-dims'):'';
    if(type==='custom')dims=[l,w,h].map(function(x){return x||'—'}).join('×');
    const label=selected?selected.textContent:(type||'—');
-   rows.push({type:type,qty:qty,label:label,dims:dims,l:l,w:w,h:h});
+   const weights=Array.from(g.querySelectorAll('.pkgWeight')).map(function(x){return Number(x.value||0)});const weightTotal=weights.reduce(function(a,b){return a+b},0);
+   rows.push({type:type,qty:qty,label:label,dims:dims,l:l,w:w,h:h,weights:weights,weightTotal:weightTotal});
  });
  return rows;
 }
 function updateBoxTotal(){
  const total=collectPackageGroups().reduce(function(sum,x){return sum+Number(x.qty||0)},0);
  const el=document.getElementById('boxes');if(el)el.value=total;
+ const totalWeight=collectPackageGroups().reduce(function(sum,x){return sum+Number(x.weightTotal||0)},0);const tw=document.getElementById('totalWeight');if(tw)tw.value=totalWeight?totalWeight.toFixed(1):'0';
 }
 function resetPackageGroups(){
  const wrap=document.getElementById('packageGroups');if(!wrap)return;wrap.innerHTML='';addPackageGroup({type:'standard',qty:1});updateBoxTotal();
@@ -186,7 +198,6 @@ async function recognizeCustomer(){
  if(!file){status.textContent=t('请先拍照或选择一张客户资料图片。','Scatta o seleziona prima una foto del cliente.');return}
  if(!window.Tesseract){status.textContent=t('识别组件没有加载，请刷新页面后再试。','Il componente OCR non è caricato. Aggiorna la pagina e riprova.');return}
  status.textContent=t('正在识别图片文字…','Riconoscimento testo in corso…');
- document.getElementById('recognizeCustomerBtn').disabled=true;
  try{
    const result=await Tesseract.recognize(file,'ita+eng',{logger:m=>{
      if(m.status==='recognizing text' && typeof m.progress==='number') status.textContent=t('正在识别：','Riconoscimento: ')+Math.round(m.progress*100)+'%';
@@ -201,9 +212,7 @@ async function recognizeCustomer(){
      :t('识别完成，但没有可靠识别出客户编号、名称或地址，请手动填写。','Riconoscimento completato, ma codice/nome/indirizzo non sono stati identificati con affidabilità. Compila manualmente.');
  }catch(e){
    status.textContent=t('图片识别失败，请换一张更清晰、正面的照片。','Riconoscimento non riuscito. Prova con una foto più nitida e frontale.');
- }finally{
-   document.getElementById('recognizeCustomerBtn').disabled=false;
- }
+ }finally{}
 }
 function login(){
  const company=document.getElementById('company').value.trim().toUpperCase(),u=document.getElementById('user').value.trim(),p=document.getElementById('pass').value;
@@ -220,7 +229,7 @@ function enter(){
 }
 function logout(){sessionStorage.removeItem('hdEmployeeSession');currentUser=null;document.getElementById('login').classList.remove('hidden')}
 function detail(){
- const parts=collectPackageGroups().filter(function(x){return x.qty>0}).map(function(x){return x.qty+' × '+(x.type==='custom'?t('自定义','Personalizzato')+' '+x.dims:x.label)});
+ const parts=collectPackageGroups().filter(function(x){return x.qty>0}).map(function(x){const weights=(x.weights||[]).map(function(w,i){return (i+1)+':'+(w||'—')+'kg'}).join(', ');return x.qty+' × '+(x.type==='custom'?t('自定义','Personalizzato')+' '+x.dims:x.label)+(weights?' ['+weights+']':'')});
  const tw=document.getElementById('totalWeight').value;if(tw)parts.push(t('总重 ','Peso totale ')+tw+'kg');
  document.querySelectorAll('#palletRows .pallet').forEach((p,i)=>{const h=p.querySelector('.ph').value,w=p.querySelector('.pw').value;parts.push(t('板 ','Pallet ')+(i+1)+': '+(h||'—')+'cm / '+(w||'—')+'kg')});
  return parts.join(' | ');
@@ -232,15 +241,15 @@ function save(){
  const customerName=document.getElementById('customerName').value.trim();
  const customer=(customerCode+' '+customerName).trim()||'—';
  const packageGroups=collectPackageGroups();
- list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,customerCode:customerCode,customerName:customerName,address:document.getElementById('customerAddress').value.trim(),carrier:document.getElementById('carrier').value,boxes:Number(document.getElementById('boxes').value||0),packageGroups:packageGroups,pallets:yes?Number(document.getElementById('palletCount').value||1):0,detail:detail(),notes:document.getElementById('notes').value});
+ list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,customerCode:customerCode,customerName:customerName,address:document.getElementById('customerAddress').value.trim(),carrier:'',boxes:Number(document.getElementById('boxes').value||0),totalWeight:Number(document.getElementById('totalWeight').value||0),packageGroups:packageGroups,pallets:yes?Number(document.getElementById('palletCount').value||1):0,detail:detail(),notes:document.getElementById('notes').value});
  localStorage.setItem('hdShipmentRecords',JSON.stringify(list));alert(t('录入已保存。','Registrazione salvata.'));clearForm();renderRecent();
 }
-function clearForm(){['customerCode','customerName','customerAddress','totalWeight','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('customerPhoto').value='';document.getElementById('customerPhotoPreview').classList.add('hidden');document.getElementById('ocrStatus').textContent='';resetPackageGroups();document.getElementById('palletized').value='no';renderPallets()}
+function clearForm(){['customerCode','customerName','customerAddress','notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('totalWeight').value='0';document.getElementById('customerPhoto').value='';document.getElementById('customerPhotoPreview').classList.add('hidden');document.getElementById('ocrStatus').textContent='';resetPackageGroups();document.getElementById('palletized').value='no';renderPallets()}
 function renderRecent(){
  const body=document.getElementById('recentBody');body.innerHTML='';const all=getRecords();
  const mine=all.map((r,i)=>({r:r,index:i})).filter(x=>x.r.username===currentUser.username).slice(-10).reverse();
- if(!mine.length){body.innerHTML='<tr><td colspan="5" class="muted">'+t('还没有录入。','Nessuna registrazione.')+'</td></tr>';return}
- mine.forEach(x=>{const r=x.r,tr=document.createElement('tr');const edit=currentUser.role==='entry_edit'?'<button class="btn" data-edit="'+x.index+'">'+t('修改','Modifica')+'</button>':'—';tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.customer+'</td><td>'+r.carrier+'</td><td>'+r.boxes+' / '+r.pallets+'</td><td>'+edit+'</td>';body.appendChild(tr)});
+ if(!mine.length){body.innerHTML='<tr><td colspan="4" class="muted">'+t('还没有录入。','Nessuna registrazione.')+'</td></tr>';return}
+ mine.forEach(x=>{const r=x.r,tr=document.createElement('tr');const edit=currentUser.role==='entry_edit'?'<button class="btn" data-edit="'+x.index+'">'+t('修改','Modifica')+'</button>':'—';tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.customer+'</td><td>'+r.boxes+' / '+r.pallets+'</td><td>'+edit+'</td>';body.appendChild(tr)});
  body.querySelectorAll('[data-edit]').forEach(btn=>btn.onclick=()=>editOwn(Number(btn.dataset.edit)));
 }
 function editOwn(i){
@@ -254,8 +263,7 @@ function editOwn(i){
  r.customer=c||'—';r.address=a;r.boxes=Number(b||0);r.pallets=Number(p||0);r.detail=d||'—';r.notes=n;r.employeeEditedAt=new Date().toISOString();list[i]=r;localStorage.setItem('hdShipmentRecords',JSON.stringify(list));renderRecent();
 }
 populate();resetPackageGroups();document.getElementById('addPackageGroupBtn').onclick=function(){addPackageGroup({type:'standard',qty:1})};document.getElementById('palletized').onchange=renderPallets;document.getElementById('palletCount').onchange=renderPallets;renderPallets();
-document.getElementById('customerPhoto').onchange=function(){const f=this.files[0];const img=document.getElementById('customerPhotoPreview');if(f){img.src=URL.createObjectURL(f);img.classList.remove('hidden')}else{img.classList.add('hidden')}};
-document.getElementById('recognizeCustomerBtn').onclick=recognizeCustomer;
+document.getElementById('customerPhoto').onchange=function(){const f=this.files[0];const img=document.getElementById('customerPhotoPreview');if(f){img.src=URL.createObjectURL(f);img.classList.remove('hidden');recognizeCustomer()}else{img.classList.add('hidden')}};
 document.getElementById('loginBtn').onclick=login;document.getElementById('pass').onkeydown=e=>{if(e.key==='Enter')login()};document.getElementById('logoutBtn').onclick=logout;document.getElementById('saveBtn').onclick=save;document.getElementById('clearBtn').onclick=clearForm;
 document.getElementById('lang').value=currentLang;document.getElementById('lang').onchange=e=>{currentLang=e.target.value;applyLang()};applyLang();
 const saved=sessionStorage.getItem('hdEmployeeSession');if(saved){const e=getEmployees().find(x=>x.active&&x.role!=='admin'&&x.username===saved);if(e){currentUser=e;document.getElementById('login').classList.add('hidden');enter()}}
