@@ -192,6 +192,14 @@ Demo data is primarily stored in browser localStorage.
 - The admin record detail can therefore show mixed packaging instead of assuming one size for the whole shipment.
 
 
+## 2026-10-04 · Dashboard and anomaly workflow
+
+- Simplified the dashboard so it only shows the **current month's shipment count**; demo freight totals and anomaly examples were removed.
+- Monthly reconciliation remains the place for shipment problems and exception handling.
+- The anomaly list now hides records marked **Correct / Corretto** while keeping unresolved and previously handled anomalies visible.
+- Added multi-select and **bulk status actions** for anomalies, including **carrier error**, **carrier contacted**, **Nota di credito / refunded**, and **correct**.
+- Selecting **Nota di credito / refunded** can now be applied to many anomaly rows at once.
+
 ## 2026-10-04 · Customer-name reconciliation
 
 - Corrected the real warehouse workflow: warehouse staff do **not** create the courier shipment and therefore do not have a BRT tracking number or Riferimento Mittente at entry time.
