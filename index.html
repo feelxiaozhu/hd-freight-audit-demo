@@ -58,8 +58,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 <section id="dashboard" class="section active">
 <div class="grid">
-<div class="card metric"><span class="muted">本月发货 / Spedizioni del mese</span><b id="mShip">0</b><span class="muted" id="dashboardMonthLabel">按当前月份自动统计</span></div>
+  <div class="card metric"><span class="muted">本月发货 / Spedizioni del mese</span><b id="mShip">0</b><span class="muted">票 / spedizioni</span></div>
 </div>
+<div class="notice" style="margin-top:14px">总览只显示本月仓库发货数量。金额、异常和 Nota di credito 统一在“月度对账”中处理，避免演示数据与真实数据混在一起。</div>
 </section>
 
 <section id="records" class="section">
@@ -68,7 +69,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
     <div><h3 style="margin:0">仓库录入记录</h3><p class="muted" style="margin:6px 0 0">后台只查看员工提交结果，不显示手机端录入表单。</p></div>
   </div>
   <div style="overflow:auto;margin-top:10px">
-    <table><thead><tr><th>时间</th><th>员工</th><th>客户 / 店铺</th><th>地址</th><th>快递</th><th>箱数</th><th>板数</th><th>尺寸 / 重量</th><th>备注</th><th>操作 / Azioni</th></tr></thead><tbody id="shipmentRecordsBody"></tbody></table>
+    <table><thead><tr><th>时间</th><th>员工</th><th>客户 / 店铺</th><th>地址</th><th>快递归属</th><th>箱数</th><th>板数</th><th>尺寸 / 重量</th><th>备注</th><th>操作 / Azioni</th></tr></thead><tbody id="shipmentRecordsBody"></tbody></table>
   </div>
 </div>
 </section>
@@ -83,7 +84,6 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <div><label>客户名称 / 店铺</label><input id="shipCustomerName" placeholder="客户名称"/></div>
 <div><label>箱数</label><input id="shipBoxes" type="number" min="0" value="1"/></div>
 <div><label>箱型</label><select id="shipBoxType"><option>标准箱 60×40×40</option><option>小箱 40×30×30</option><option>大箱 80×60×60</option></select></div>
-<div><label>承运商</label><select id="warehouseCarrier" class="carrierSelect"></select></div>
 </div>
 <div style="margin-top:14px"><label>是否打板</label><div class="switches"><label><input type="radio" name="pal" value="no" checked> 不打板</label><label><input type="radio" name="pal" value="yes"> 打板</label></div></div>
 <div id="palletBlock" style="display:none;margin-top:12px">
@@ -109,7 +109,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 <section id="carriers" class="section">
 <div class="card">
 <div class="actions" style="justify-content:space-between;align-items:center">
-<div><h3 style="margin:0">快递公司</h3><p class="muted" style="margin:6px 0 0">新增后会自动同步到仓库录入、Tariffario 和发票上传。</p></div>
+<div><h3 style="margin:0">快递公司</h3><p class="muted" style="margin:6px 0 0">新增后会自动同步到 Tariffario 和发票上传；仓库员工不选择快递公司。</p></div>
 <button class="btn primary" id="addCarrierBtn">+ 新增快递公司</button>
 </div>
 </div>
@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 </div>
 
 <div class="grid" style="margin-top:14px">
-  <div class="card metric"><span class="muted">仓库记录 / Registrazioni</span><b id="auditWarehouseCount">0</b><span class="muted">当月该快递记录</span></div>
+  <div class="card metric"><span class="muted">仓库记录 / Registrazioni</span><b id="auditWarehouseCount">0</b><span class="muted">已匹配并归属该快递</span></div>
   <div class="card metric"><span class="muted">发票批次 / Fatture</span><b id="auditInvoiceCount">0</b><span class="muted">已上传月度发票</span></div>
   <div class="card metric"><span class="muted">Tariffario</span><b id="auditTariffStatus">—</b><span class="muted" id="auditTariffDetail">按有效期匹配</span></div>
   <div class="card metric"><span class="muted">未解决异常 / Anomalie aperte</span><b id="auditOpenIssues">0</b><span class="muted">只看需要处理的项目</span></div>
@@ -183,23 +183,21 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;p
 
 <div class="card" style="margin-top:14px">
   <div class="actions" style="justify-content:space-between;align-items:center">
-    <div><h3 style="margin:0">异常清单 / Anomalie</h3><p class="muted" style="margin:6px 0 0">这里只显示本月需要处理或曾经处理过的异常快递；标记为“正确”的记录不再占用异常清单。</p></div>
-    <button class="btn" id="addAuditIssueBtn">+ 添加异常</button>
-  </div>
-  <div class="actions" style="margin-top:12px;align-items:end">
-    <div style="min-width:220px"><label>批量处理 / Azione multipla</label>
-      <select id="bulkAuditStatus">
-        <option value="review">待确认 / Da verificare</option>
+    <h3 style="margin:0">异常清单 / Anomalie</h3>
+    <div class="actions">
+      <select id="bulkIssueStatus" style="width:auto">
         <option value="carrier_error">快递收费错误 / Errore corriere</option>
-        <option value="contacted">已联系快递 / Corriere contattato</option>
-        <option value="credited">已开 Nota di credito / 已退款</option>
+        <option value="contacted">已联系快递 / Contattato</option>
+        <option value="credited">已开 Nota / Nota di credito</option>
         <option value="ok">正确 / Corretto</option>
       </select>
+      <button class="btn primary" id="applyBulkIssueBtn">批量应用 / Applica</button>
+      <button class="btn" id="addAuditIssueBtn">+ 添加异常</button>
     </div>
-    <button class="btn primary" id="bulkAuditApplyBtn">应用到已勾选 / Applica selezionati</button>
   </div>
+  <div class="muted" style="margin-top:8px">可多选后批量标记；标记为“正确”的记录会从异常清单隐藏。若是客户名称待确认，确认“正确”后会记住该客户别名，后续月份自动匹配。</div>
   <div style="overflow:auto;margin-top:10px">
-    <table><thead><tr><th><input id="selectAllAuditIssues" type="checkbox" aria-label="Select all"></th><th>运单</th><th>类型</th><th>说明</th><th>差额</th><th>处理状态</th><th>更新时间</th></tr></thead><tbody id="auditIssueBody"></tbody></table>
+    <table><thead><tr><th><input id="auditSelectAll" type="checkbox" aria-label="select all"></th><th>运单</th><th>类型</th><th>说明</th><th>差额</th><th>处理状态</th><th>更新时间</th></tr></thead><tbody id="auditIssueBody"></tbody></table>
   </div>
 </div>
 </section>
@@ -558,7 +556,7 @@ function renderTariffHistory(){
   });
 }
 
-async function extractTariffText(file){
+async async function extractTariffText(file){
   const ext=(file.name.split('.').pop()||'').toLowerCase();
   if(ext==='pdf' && window.pdfjsLib){
     pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -567,7 +565,17 @@ async function extractTariffText(file){
     let out='';
     for(let i=1;i<=pdf.numPages;i++){
       const page=await pdf.getPage(i); const tc=await page.getTextContent();
-      out+=tc.items.map(function(x){return x.str}).join(' ')+'\n';
+      const groups={};
+      tc.items.forEach(function(item){
+        const y=item.transform&&item.transform.length>5?Math.round(item.transform[5]/2)*2:0;
+        if(!groups[y])groups[y]=[];
+        groups[y].push({x:item.transform&&item.transform.length>4?item.transform[4]:0,text:item.str});
+      });
+      Object.keys(groups).map(Number).sort(function(a,b){return b-a}).forEach(function(y){
+        const line=groups[y].sort(function(a,b){return a.x-b.x}).map(function(x){return x.text}).join(' ').replace(/\s+/g,' ').trim();
+        if(line)out+=line+'\n';
+      });
+      out+='\n';
     }
     return out;
   }
@@ -648,9 +656,116 @@ function renderInvoiceBatchHistory(){
  if(!rows.length){wrap.innerHTML='<div class="muted">'+(currentLang==='it'?'Nessuna fattura mensile caricata.':'还没有上传月度发票。')+'</div>';return}
  rows.forEach(function(x){
    const d=document.createElement('div');d.className='groupCard';
-   d.innerHTML='<div class="groupHead"><span>'+x.carrier+' · '+(x.month||String(x.date||'').slice(0,7)||'—')+'</span><span class="muted">'+x.file+'</span></div>';
+   const parsed=Number(x.parsedRows||0),matched=Number(x.matchedRows||0);
+   const meta=parsed?(' · '+matched+'/'+parsed+' '+(currentLang==='it'?'abbinati':'已匹配')):' · '+(currentLang==='it'?'dettaglio non riconosciuto':'未识别逐票明细');
+   d.innerHTML='<div class="groupHead"><span>'+x.carrier+' · '+(x.month||String(x.date||'').slice(0,7)||'—')+'</span><span class="muted">'+x.file+meta+'</span></div>';
    wrap.appendChild(d);
  });
+}
+
+function getCustomerAliases(){try{return JSON.parse(localStorage.getItem('hdCustomerAliases')||'[]')}catch(e){return []}}
+function saveCustomerAliases(rows){localStorage.setItem('hdCustomerAliases',JSON.stringify(rows))}
+function rememberCustomerAlias(a,b){
+ const x=normalizeCustomerName(a),y=normalizeCustomerName(b);if(!x||!y||x===y)return;
+ const rows=getCustomerAliases();if(rows.some(function(r){return (r.a===x&&r.b===y)||(r.a===y&&r.b===x)}))return;
+ rows.push({a:x,b:y,createdAt:new Date().toISOString()});saveCustomerAliases(rows);
+}
+function isCustomerAlias(a,b){
+ const x=normalizeCustomerName(a),y=normalizeCustomerName(b);if(!x||!y)return false;
+ return getCustomerAliases().some(function(r){return (r.a===x&&r.b===y)||(r.a===y&&r.b===x)});
+}
+function parseEuroNumber(value){
+ const raw=String(value||'').replace(/\s/g,'').replace(/€/g,'');
+ if(!raw)return null;
+ const normalized=raw.includes(',')?raw.replace(/\./g,'').replace(',','.') : raw;
+ const n=Number(normalized);return Number.isFinite(n)?n:null;
+}
+function parseInvoiceRows(text,carrier){
+ const lines=String(text||'').split(/\r?\n/).map(function(x){return x.replace(/\s+/g,' ').trim()}).filter(Boolean);
+ const rows=[],seen={};
+ lines.forEach(function(line,idx){
+   const upper=line.toUpperCase();
+   if(/BRT|BARTOLINI|GENERAL LOGISTICS|\bGLS\b|FEDEX|DHL|SDA|HD GROUP/.test(upper) && !/(CLIENTE|DESTINATARIO|RAGIONE SOCIALE)/.test(upper))return;
+   let customer='';
+   const labelled=line.match(/(?:cliente|destinatario|ragione\s+sociale|nominativo)\s*[:\-]?\s*([A-ZÀ-ÿ0-9&' .\-]{3,80})/i);
+   if(labelled)customer=labelled[1].trim();
+   if(!customer){
+     const company=line.match(/([A-ZÀ-Ý0-9][A-ZÀ-Ý0-9&' .\-]{2,70}\b(?:S\.?R\.?L\.?|SRLS|S\.?P\.?A\.?|SNC|SAS)\b)/i);
+     if(company)customer=company[1].trim();
+   }
+   if(!customer)return;
+   customer=customer.replace(/\s+(?:COLLI|PESO|KG|IMPORTO|TOTALE|SPEDIZIONE|AWB|TRACKING).*$/i,'').trim();
+   if(customer.length<3)return;
+   const track=(line.match(/(?:sped(?:izione)?|awb|tracking|lettera\s+di\s+vettura)\s*[:#\-]?\s*([A-Z0-9]{6,24})/i)||[])[1]||'';
+   const date=(line.match(/\b(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\b/)||[])[1]||'';
+   const boxesMatch=line.match(/(?:colli|pezzi|pz)\s*[:=]?\s*(\d{1,4})/i);
+   const weightMatch=line.match(/(?:peso(?:\s+tassabile)?|kg)\s*[:=]?\s*(\d+(?:[.,]\d+)?)/i) || line.match(/(\d+(?:[.,]\d+)?)\s*kg\b/i);
+   const euros=Array.from(line.matchAll(/(?:€\s*)?(\d{1,6}(?:[.,]\d{2}))\s*€/g)).map(function(m){return parseEuroNumber(m[1])}).filter(function(x){return x!=null});
+   const amount=euros.length?euros[euros.length-1]:null;
+   const key=(track||'')+'|'+normalizeCustomerName(customer)+'|'+date+'|'+idx;
+   if(seen[key])return;seen[key]=true;
+   rows.push({customerName:customer,tracking:track,date:date,boxes:boxesMatch?Number(boxesMatch[1]):null,weight:weightMatch?parseEuroNumber(weightMatch[1]):null,amount:amount,rawLine:line});
+ });
+ return rows;
+}
+function autoIssueKey(month,carrier,row,type){return [month,carrier,row.tracking||normalizeCustomerName(row.customerName),type].join('|')}
+function addOrUpdateAutoIssue(issue){
+ const rows=getAuditIssues();const idx=rows.findIndex(function(r){return r.autoKey&&r.autoKey===issue.autoKey});
+ if(idx>=0){issue.status=rows[idx].status||issue.status;rows[idx]=Object.assign({},rows[idx],issue)}else rows.push(issue);
+ saveAuditIssues(rows);
+}
+function reconcileInvoiceRows(invoiceRows,carrier,month){
+ const shipments=getShipmentRecords();const used=new Set();let matched=0,ambiguous=0,unmatched=0,anomalies=0;
+ invoiceRows.forEach(function(row){
+   const candidateIndexes=shipments.map(function(r,i){return {r:r,i:i}}).filter(function(x){
+     return String(x.r.time||'').slice(0,7)===month && (!x.r.carrier||x.r.carrier===carrier) && !used.has(x.i) && !x.r.matchedInvoiceKey;
+   });
+   const candidates=candidateIndexes.map(function(x){return x.r});
+   const hit=matchShipmentCandidate(row,candidates);
+   if(!hit||hit.score<0.74){
+     unmatched++;
+     addOrUpdateAutoIssue({autoKey:autoIssueKey(month,carrier,row,'unmatched'),month:month,carrier:carrier,shipment:row.tracking||'—',type:'发票未匹配仓库记录',note:'客户：'+row.customerName,difference:'—',status:'review',invoiceCustomer:row.customerName,updatedAt:new Date().toISOString()});
+     return;
+   }
+   const shipmentIndex=shipments.indexOf(hit.shipment);
+   if(hit.ambiguous){
+     ambiguous++;
+     addOrUpdateAutoIssue({autoKey:autoIssueKey(month,carrier,row,'ambiguous'),month:month,carrier:carrier,shipment:row.tracking||'—',type:'客户匹配待确认',note:'发票：'+row.customerName+' → 候选：'+(hit.shipment.customerName||hit.shipment.customer||'—'),difference:'—',status:'review',invoiceCustomer:row.customerName,shipmentCustomer:hit.shipment.customerName||hit.shipment.customer||'',candidateShipmentIndex:shipmentIndex,updatedAt:new Date().toISOString()});
+     return;
+   }
+   used.add(shipmentIndex);matched++;
+   const key=[carrier,month,row.tracking||normalizeCustomerName(row.customerName)].join('|');
+   shipments[shipmentIndex].carrier=carrier;shipments[shipmentIndex].matchedInvoiceKey=key;shipments[shipmentIndex].invoiceTracking=row.tracking||'';shipments[shipmentIndex].matchScore=hit.score;
+   const notes=[];
+   if(row.boxes!=null&&hit.shipment.boxes!=null&&Number(row.boxes)!==Number(hit.shipment.boxes))notes.push('箱数：发票 '+row.boxes+' / 仓库 '+hit.shipment.boxes);
+   const iw=Number(row.weight),sw=Number(hit.shipment.totalWeight);
+   if(Number.isFinite(iw)&&iw>0&&Number.isFinite(sw)&&sw>0&&Math.abs(iw-sw)>Math.max(1,sw*0.05))notes.push('重量：发票 '+iw+'kg / 仓库 '+sw+'kg');
+   if(notes.length){
+     anomalies++;
+     addOrUpdateAutoIssue({autoKey:autoIssueKey(month,carrier,row,'data_mismatch'),month:month,carrier:carrier,shipment:row.tracking||'—',type:'重量 / 箱数异常',note:notes.join('；'),difference:'—',status:'review',invoiceCustomer:row.customerName,shipmentCustomer:hit.shipment.customerName||hit.shipment.customer||'',candidateShipmentIndex:shipmentIndex,updatedAt:new Date().toISOString()});
+   }
+ });
+ localStorage.setItem('hdShipmentRecords',JSON.stringify(shipments));
+ return {matched:matched,ambiguous:ambiguous,unmatched:unmatched,anomalies:anomalies};
+}
+function applyIssueStatus(index,status){
+ const rows=getAuditIssues();const issue=rows[index];if(!issue)return;
+ if(status==='ok'&&issue.candidateShipmentIndex!=null){
+   const shipments=getShipmentRecords(),r=shipments[issue.candidateShipmentIndex];
+   if(r){
+     if(!r.carrier)r.carrier=issue.carrier;
+     r.matchScore=1;r.matchedInvoiceKey=r.matchedInvoiceKey||['confirmed',issue.carrier,issue.month,issue.shipment||issue.invoiceCustomer||''].join('|');
+     shipments[issue.candidateShipmentIndex]=r;localStorage.setItem('hdShipmentRecords',JSON.stringify(shipments));
+     if(issue.invoiceCustomer&&issue.shipmentCustomer)rememberCustomerAlias(issue.invoiceCustomer,issue.shipmentCustomer);
+   }
+ }
+ issue.status=status;issue.updatedAt=new Date().toISOString();rows[index]=issue;saveAuditIssues(rows);
+}
+function applyBulkIssueStatus(){
+ const status=document.getElementById('bulkIssueStatus').value;
+ const selected=Array.from(document.querySelectorAll('[data-issue-check]:checked')).map(function(x){return Number(x.getAttribute('data-issue-check'))});
+ selected.forEach(function(i){applyIssueStatus(i,status)});
+ renderMonthlyAudit();renderShipmentRecords();renderDashboard();
 }
 function getAuditIssues(){try{return JSON.parse(localStorage.getItem('hdAuditIssues')||'[]')}catch(e){return []}}
 function saveAuditIssues(rows){localStorage.setItem('hdAuditIssues',JSON.stringify(rows))}
@@ -661,36 +776,19 @@ function issueStatusLabel(s){
 function renderAuditIssues(){
  const body=document.getElementById('auditIssueBody');if(!body)return;
  const month=document.getElementById('auditMonth').value,carrier=document.getElementById('auditCarrier').value;
- const all=getAuditIssues();
- const rows=all.map(function(r,i){return {r:r,index:i}}).filter(function(x){
-   return x.r.month===month&&x.r.carrier===carrier&&(x.r.status||'review')!=='ok';
- });
+ const all=getAuditIssues();const rows=all.map(function(r,i){return {r:r,index:i}}).filter(function(x){return x.r.month===month&&x.r.carrier===carrier&&x.r.status!=='ok'});
  body.innerHTML='';
- const selectAll=document.getElementById('selectAllAuditIssues');if(selectAll)selectAll.checked=false;
- if(!rows.length){body.innerHTML='<tr><td colspan="7" class="muted">'+(currentLang==='it'?'Nessuna anomalia per questo mese.':'这个月份没有需要显示的异常快递。')+'</td></tr>';return}
+ if(!rows.length){body.innerHTML='<tr><td colspan="7" class="muted">'+(currentLang==='it'?'Nessuna anomalia da gestire per questo mese.':'这个月份没有需要处理的异常。')+'</td></tr>';return}
  rows.forEach(function(x){
    const r=x.r,tr=document.createElement('tr');
-   tr.innerHTML='<td><input type="checkbox" data-issue-select="'+x.index+'"></td><td>'+(r.shipment||'—')+'</td><td>'+r.type+'</td><td>'+(r.note||'—')+'</td><td>'+(r.difference||'—')+'</td><td><select data-issue-status="'+x.index+'"><option value="review">待确认 / Da verificare</option><option value="ok">正确 / Corretto</option><option value="carrier_error">快递收费错误 / Errore corriere</option><option value="contacted">已联系快递 / Contattato</option><option value="credited">已开 Nota di credito / 已退款</option></select></td><td>'+(r.updatedAt?new Date(r.updatedAt).toLocaleString():'—')+'</td>';
+   tr.innerHTML='<td><input type="checkbox" data-issue-check="'+x.index+'"></td><td>'+(r.shipment||'—')+'</td><td>'+r.type+'</td><td>'+(r.note||'—')+'</td><td>'+(r.difference||'—')+'</td><td><select data-issue-status="'+x.index+'"><option value="review">待确认 / Da verificare</option><option value="ok">正确 / Corretto</option><option value="carrier_error">快递收费错误 / Errore corriere</option><option value="contacted">已联系快递 / Contattato</option><option value="credited">已开 Nota / Nota di credito</option></select></td><td>'+(r.updatedAt?new Date(r.updatedAt).toLocaleString():'—')+'</td>';
    body.appendChild(tr);tr.querySelector('select').value=r.status||'review';
  });
  body.querySelectorAll('[data-issue-status]').forEach(function(sel){
-   sel.onchange=function(){const rows=getAuditIssues(),i=Number(sel.getAttribute('data-issue-status'));if(!rows[i])return;rows[i].status=sel.value;rows[i].updatedAt=new Date().toISOString();saveAuditIssues(rows);renderMonthlyAudit()};
+   sel.onchange=function(){applyIssueStatus(Number(sel.getAttribute('data-issue-status')),sel.value);renderMonthlyAudit();renderShipmentRecords()};
  });
- if(selectAll){
-   selectAll.onchange=function(){
-     body.querySelectorAll('[data-issue-select]').forEach(function(cb){cb.checked=selectAll.checked});
-   };
- }
+ const allBox=document.getElementById('auditSelectAll');if(allBox){allBox.checked=false;allBox.onchange=function(){body.querySelectorAll('[data-issue-check]').forEach(function(x){x.checked=allBox.checked})}}
 }
-function bulkApplyAuditStatus(){
- const selected=Array.from(document.querySelectorAll('#auditIssueBody [data-issue-select]:checked')).map(function(cb){return Number(cb.getAttribute('data-issue-select'))});
- if(!selected.length){alert(currentLang==='it'?'Seleziona almeno un’anomalia.':'请先勾选至少一条异常。');return}
- const status=document.getElementById('bulkAuditStatus').value;
- const rows=getAuditIssues(),now=new Date().toISOString();
- selected.forEach(function(i){if(rows[i]){rows[i].status=status;rows[i].updatedAt=now}});
- saveAuditIssues(rows);renderMonthlyAudit();
-}
-
 function addAuditIssue(){
  const month=document.getElementById('auditMonth').value,carrier=document.getElementById('auditCarrier').value;
  const shipment=prompt(currentLang==='it'?'Numero spedizione':'运单号')||'';
@@ -706,26 +804,32 @@ function findTariffForMonth(carrier,month){
 function renderMonthlyAudit(){
  const month=document.getElementById('auditMonth')?document.getElementById('auditMonth').value:'';const carrier=document.getElementById('auditCarrier')?document.getElementById('auditCarrier').value:'';
  if(!month||!carrier)return;
- const shipments=getShipmentRecords().filter(function(r){return String(r.time||'').slice(0,7)===month});
+ const shipments=getShipmentRecords().filter(function(r){return String(r.time||'').slice(0,7)===month&&r.carrier===carrier});
  const invoices=getInvoices().filter(function(i){return (i.month||String(i.date||'').slice(0,7))===month&&i.carrier===carrier});
  const tariff=findTariffForMonth(carrier,month);
  const issues=getAuditIssues().filter(function(i){return i.month===month&&i.carrier===carrier});
  const open=issues.filter(function(i){return !['ok','credited'].includes(i.status)}).length;
+ const parsed=invoices.reduce(function(a,i){return a+Number(i.parsedRows||0)},0);
+ const matched=invoices.reduce(function(a,i){return a+Number(i.matchedRows||0)},0);
+ const invoiceTotal=invoices.reduce(function(a,i){return a+Number(i.invoiceTotal||0)},0);
  document.getElementById('auditWarehouseCount').textContent=shipments.length;
  document.getElementById('auditInvoiceCount').textContent=invoices.length;
  document.getElementById('auditTariffStatus').textContent=tariff?(currentLang==='it'?'Trovato':'已匹配'):(currentLang==='it'?'Manca':'缺少');
  document.getElementById('auditTariffDetail').textContent=tariff?((tariff.validFrom||tariff.date||'—')+' → '+(tariff.validTo||'∞')):(currentLang==='it'?'Nessun tariffario valido nel mese':'该月没有有效 Tariffario');
  document.getElementById('auditOpenIssues').textContent=open;
  document.getElementById('auditBatchTitle').textContent=carrier+' · '+month;
+ document.getElementById('auditMatched').textContent=parsed?(matched+' / '+parsed):'—';
+ document.getElementById('auditInvoiceTotal').textContent=invoiceTotal?('€ '+invoiceTotal.toFixed(2)):'—';
+ document.getElementById('auditTheoryTotal').textContent='—';document.getElementById('auditDifference').textContent='—';
  renderAuditIssues();
 }
-async function parseInvoice(){
+async async function parseInvoice(){
   const file=document.getElementById('invoiceFile').files[0];
   const carrier=document.getElementById('invoiceCarrier').value;
   const invoiceMonth=document.getElementById('invoiceMonth')?document.getElementById('invoiceMonth').value:new Date().toISOString().slice(0,7);
   const box=document.getElementById('invoiceParseResult');
   if(!file){alert(currentLang==='it'?'Seleziona prima una fattura PDF.':'请先选择 PDF 发票。');return;}
-  box.style.display='block';box.textContent=currentLang==='it'?'Controllo corriere del documento...':'正在核对发票所属快递公司...';
+  box.style.display='block';box.textContent=currentLang==='it'?'Lettura fattura e riconciliazione...':'正在读取发票并逐票匹配...';
   try{
     const text=await extractTariffText(file);
     const detectedCarrier=detectCarrierFromText(text);
@@ -735,16 +839,23 @@ async function parseInvoice(){
         :('已拦截：你选择的是 '+carrier+'，但这张发票看起来属于 '+detectedCarrier+'。系统没有导入。');
       return;
     }
+    const rows=parseInvoiceRows(text,carrier);
+    const result=reconcileInvoiceRows(rows,carrier,invoiceMonth);
+    const invoiceTotal=rows.reduce(function(a,r){return a+Number(r.amount||0)},0);
     const invoices=getInvoices();
-    invoices.push({carrier:carrier,month:invoiceMonth,file:file.name,validated:detectedCarrier||'manual',date:new Date().toISOString()});
+    invoices.push({carrier:carrier,month:invoiceMonth,file:file.name,validated:detectedCarrier||'manual',date:new Date().toISOString(),parsedRows:rows.length,matchedRows:result.matched,ambiguousRows:result.ambiguous,unmatchedRows:result.unmatched,invoiceTotal:invoiceTotal});
     localStorage.setItem('hdInvoices',JSON.stringify(invoices));
-    renderInvoiceBatchHistory();
+    renderInvoiceBatchHistory();renderShipmentRecords();renderDashboard();
     if(document.getElementById('auditMonth')){document.getElementById('auditMonth').value=invoiceMonth;document.getElementById('auditCarrier').value=carrier;renderMonthlyAudit();}
-    box.textContent=currentLang==='it'
-      ?('Fattura acquisita e vincolata a '+carrier+'. Il corriere non verrà cambiato automaticamente.')
-      :('发票已导入并固定绑定到 '+carrier+'，系统不会自动改成其他快递公司。');
+    box.textContent=rows.length
+      ?(currentLang==='it'
+        ?('Fattura '+carrier+': '+rows.length+' righe riconosciute, '+result.matched+' abbinate, '+result.ambiguous+' da confermare, '+result.unmatched+' non abbinate.')
+        :('已解析 '+carrier+' 发票：识别 '+rows.length+' 票，自动匹配 '+result.matched+' 票，待确认 '+result.ambiguous+' 票，未匹配 '+result.unmatched+' 票。'))
+      :(currentLang==='it'
+        ?'Fattura acquisita, ma il demo non è riuscito a separare le singole spedizioni. Nessuna anomalia artificiale è stata creata.'
+        :'发票已读取，但这份 PDF 暂时没有可靠拆出逐票明细；系统不会因此把其他仓库记录误标成异常。');
   }catch(e){
-    box.textContent=currentLang==='it'?'File non leggibile nel demo; nessuna assegnazione automatica è stata effettuata.':'测试版无法读取该文件，因此没有自动归类到任何其他快递公司。';
+    box.textContent=currentLang==='it'?'File non leggibile nel demo; nessuna anomalia artificiale è stata creata.':'测试版无法可靠读取该文件，因此没有制造任何假异常。';
   }
 }
 
@@ -756,7 +867,7 @@ document.getElementById('refreshAuditBtn').onclick=renderMonthlyAudit;
 document.getElementById('auditMonth').onchange=renderMonthlyAudit;
 document.getElementById('auditCarrier').onchange=renderMonthlyAudit;
 document.getElementById('addAuditIssueBtn').onclick=addAuditIssue;
-document.getElementById('bulkAuditApplyBtn').onclick=bulkApplyAuditStatus;
+document.getElementById('applyBulkIssueBtn').onclick=applyBulkIssueStatus;
 populateCarrierSelects(); renderCarrierGrid(); renderSurcharges(); renderTariffHistory(); renderInvoiceBatchHistory(); renderMonthlyAudit();
 
 
@@ -828,6 +939,7 @@ function normalizeCustomerName(value){
 }
 function customerNameScore(a,b){
  const x=normalizeCustomerName(a),y=normalizeCustomerName(b);if(!x||!y)return 0;if(x===y)return 1;
+ if(isCustomerAlias(a,b))return 1;
  if(x.includes(y)||y.includes(x))return 0.95;
  const xa=x.split(' ').filter(Boolean),ya=y.split(' ').filter(Boolean);
  const common=xa.filter(function(w){return ya.includes(w)}).length;
@@ -857,29 +969,27 @@ function matchShipmentCandidate(invoiceRow,shipments){
  return {shipment:best.shipment,method:best.nameScore>=0.95?'customer_normalized':'customer_fuzzy',score:best.total,ambiguous:!!ambiguous};
 }
 function getShipmentRecords(){try{return JSON.parse(localStorage.getItem('hdShipmentRecords')||'[]')}catch(e){return []}}
-function renderDashboardSummary(){
- const now=new Date();
- const month=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+function renderDashboard(){
+ const now=new Date(),month=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
  const count=getShipmentRecords().filter(function(r){return String(r.time||'').slice(0,7)===month}).length;
- const m=document.getElementById('mShip');if(m)m.textContent=count;
- const label=document.getElementById('dashboardMonthLabel');
- if(label)label.textContent=(currentLang==='it'?'Mese corrente: ':'当前月份：')+month;
+ const el=document.getElementById('mShip');if(el)el.textContent=count;
 }
 function renderShipmentRecords(){
- renderDashboardSummary();
  const body=document.getElementById('shipmentRecordsBody');if(!body)return;body.innerHTML='';
  const source=getShipmentRecords();
  const list=source.map(function(r,i){return {r:r,index:i}}).reverse();
- if(!list.length){body.innerHTML='<tr><td colspan="10" class="muted">'+(currentLang==='it'?'Nessuna registrazione ancora.':'还没有员工提交记录。')+'</td></tr>';return;}
+ if(!list.length){body.innerHTML='<tr><td colspan="10" class="muted">'+(currentLang==='it'?'Nessuna registrazione ancora.':'还没有员工提交记录。')+'</td></tr>';renderDashboard();return;}
  list.forEach(function(item){
   const r=item.r;
   const tr=document.createElement('tr');
-  tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.employee+'</td><td>'+r.customer+'</td><td>'+(r.address||'—')+'</td><td>'+(r.carrier||'—')+'</td><td>'+r.boxes+'</td><td>'+r.pallets+'</td><td>'+r.detail+'</td><td>'+(r.notes||'—')+'</td><td><button class="btn smallBtn" data-edit-record="'+item.index+'">'+(currentLang==='it'?'Modifica':'编辑')+'</button></td>';
+  const carrier=r.carrier|| (currentLang==='it'?'Da assegnare':'待匹配');
+  tr.innerHTML='<td>'+new Date(r.time).toLocaleString()+'</td><td>'+r.employee+'</td><td>'+r.customer+'</td><td>'+(r.address||'—')+'</td><td>'+carrier+'</td><td>'+r.boxes+'</td><td>'+r.pallets+'</td><td>'+r.detail+'</td><td>'+(r.notes||'—')+'</td><td><button class="btn smallBtn" data-edit-record="'+item.index+'">'+(currentLang==='it'?'Modifica':'编辑')+'</button></td>';
   body.appendChild(tr);
  });
  body.querySelectorAll('[data-edit-record]').forEach(function(btn){
    btn.onclick=function(){editShipmentRecord(Number(btn.getAttribute('data-edit-record')))};
  });
+ renderDashboard();
 }
 function editShipmentRecord(index){
  const list=getShipmentRecords();
@@ -919,9 +1029,9 @@ document.getElementById('saveShipment').onclick=function(){
  const type=document.getElementById('shipBoxType').value;
  const detail=(type||'')+(palYes?(' | '+collectPalletDetail()):'');
  const list=getShipmentRecords();
- list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,carrier:document.getElementById('warehouseCarrier').value,boxes:boxes,pallets:pallets,detail:detail,notes:document.getElementById('shipNotes').value});
+ list.push({time:new Date().toISOString(),employee:currentUser.name,username:currentUser.username,warehouse:currentUser.warehouse,customer:customer,customerName:document.getElementById('shipCustomerName').value.trim(),carrier:'',boxes:boxes,pallets:pallets,detail:detail,notes:document.getElementById('shipNotes').value});
  localStorage.setItem('hdShipmentRecords',JSON.stringify(list));
- renderDashboardSummary();
+ renderDashboard();
  alert(currentLang==='it'?'Registrazione salvata.':'录入已保存。');
  renderShipmentRecords();
 };
@@ -932,7 +1042,7 @@ document.getElementById('loginBtn').onclick=login;
 document.getElementById('logoutBtn').onclick=logout;
 document.getElementById('addEmployeeBtn').onclick=addEmployee;
 document.getElementById('loginPass').addEventListener('keydown',function(e){if(e.key==='Enter')login()});
-renderEmployees();renderShipmentRecords();
+renderEmployees();renderShipmentRecords();renderDashboard();
 captureI18n();
 document.getElementById('languageSelect').addEventListener('change',function(e){applyLanguage(e.target.value)});
 applyLanguage(currentLang);currentUser=DEFAULT_EMPLOYEES[0];enterApp();
